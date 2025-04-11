@@ -53,7 +53,7 @@ def handle_message(event):
 
 
     #按鈕樣板
-    if event.message.text == 'button':
+    if event.message.text == '按鈕':
         buttons_template = TemplateSendMessage(
             alt_text = 'buttons template',
             template = ButtonsTemplate(
