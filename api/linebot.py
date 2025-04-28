@@ -5,7 +5,7 @@ from linebot.models import (
     MessageEvent, TextMessage, TextSendMessage,
     TemplateSendMessage, ButtonsTemplate, MessageAction, FlexSendMessage, ConfirmTemplate, ImageCarouselTemplate, ImageCarouselColumn
 )
-
+from transitions.extensions import GraphMachine
 import os
 import json
 import gspread
@@ -21,7 +21,84 @@ logger = logging.getLogger(__name__)
 line_bot_api = LineBotApi(os.getenv("LINE_CHANNEL_ACCESS_TOKEN"))
 line_handler = WebhookHandler(os.getenv("LINE_CHANNEL_SECRET"))
 user_states = {}
+# 預約狀態機模型
+class BookingFSM(GraphMachine):
+    def __init__(self, user_id, **machine_configs):
+        self.user_id = user_id
+        super().__init__(**machine_configs)
+        self.reset_booking_data()
 
+    def reset_booking_data(self):
+        self.booking_category = None
+        self.booking_service = None
+        self.booking_date = None
+        self.booking_time = None
+
+    def ask_category(self, event):
+        categories = ["團體課程", "私人教練", "場地租借"] # 你的預約類別
+        buttons = [MessageAction(label=cat, text=cat) for cat in categories]
+        template = TemplateSendMessage(
+            alt_text="請選擇預約類別",
+            template=ButtonsTemplate(
+                title="預約選項",
+                text="您想要預約什麼？",
+                actions=buttons
+            )
+        )
+        line_bot_api.reply_message(event.reply_token, template)
+
+    def process_category(self, event):
+        self.booking_category = event.message.text
+        # 根據選擇的類別，詢問下一步 (例如服務或課程)
+        line_bot_api.reply_message(event.reply_token, TextSendMessage(text=f"您選擇了 {self.booking_category}，請輸入您想預約的項目。"))
+        self.next_state() # 觸發下一個狀態
+
+    def ask_service(self, event):
+        # 根據 self.booking_category 提供相應的服務選項
+        line_bot_api.reply_message(event.reply_token, TextSendMessage(text="請輸入您想預約的服務名稱。"))
+
+    def process_service(self, event):
+        self.booking_service = event.message.text
+        line_bot_api.reply_message(event.reply_token, TextSendMessage(text="請輸入您想預約的日期 (YYYY-MM-DD)。"))
+        self.next_state()
+
+    def ask_date(self, event):
+        line_bot_api.reply_message(event.reply_token, TextSendMessage(text="請輸入您想預約的時間 (HH:MM)。"))
+
+    def process_date(self, event):
+        self.booking_date = event.message.text
+        line_bot_api.reply_message(event.reply_token, TextSendMessage(text=f"請確認您的預約：\n類別：{self.booking_category}\n服務：{self.booking_service}\n日期：{self.booking_date}\n時間：請輸入時間 (HH:MM)。"))
+        self.next_state()
+
+    def ask_time(self, event):
+        line_bot_api.reply_message(event.reply_token, TextSendMessage(text="請輸入預約時間 (HH:MM)。"))
+
+    def process_time(self, event):
+        self.booking_time = event.message.text
+        confirmation_text = f"請確認您的預約：\n類別：{self.booking_category}\n服務：{self.booking_service}\n日期：{self.booking_date}\n時間：{self.booking_time}\n\n輸入 '確認' 以完成預約，或輸入 '取消' 以取消。"
+        line_bot_api.reply_message(event.reply_token, TextSendMessage(text=confirmation_text))
+        self.next_state()
+
+    def process_booking(self, event):
+        try:
+            client = get_gspread_client()
+            sheet = client.open_by_key("YOUR_SPREADSHEET_KEY").worksheet("預約紀錄") # 替換為你的工作表名稱
+            booking_data = [self.user_id, self.booking_category, self.booking_service, self.booking_date, self.booking_time]
+            sheet.append_row(booking_data)
+            line_bot_api.push_message(self.user_id, TextSendMessage(text="✅ 您的預約已成功記錄！"))
+        except Exception as e:
+            logger.error(f"儲存預約資料到 Google Sheets 失敗：{e}", exc_info=True)
+            line_bot_api.push_message(self.user_id, TextSendMessage(text="⚠ 儲存預約資料時發生錯誤，請稍後再試。"))
+        if self.user_id in user_states:
+            del user_states[self.user_id]
+
+    def send_cancellation_message(self, event):
+        line_bot_api.reply_message(event.reply_token, TextSendMessage(text="❌ 您的預約已取消。"))
+        if self.user_id in user_states:
+            del user_states[self.user_id]
+
+    def send_booking_start_message(self, event):
+        line_bot_api.reply_message(event.reply_token, TextSendMessage(text="好的，請按照步驟完成預約。"))
 def get_gspread_client():
     credentials_content = os.environ.get("GOOGLE_APPLICATION_CREDENTIALS_CONTENT")
     if not credentials_content:
@@ -438,6 +515,7 @@ def handle_message(event):
                 line_bot_api.reply_message(
                     event.reply_token, TextSendMessage(text=f"⚠ 查無『{user_msg}』分類的器材圖片")
                 )
+                
                 return
 
             # 每 10 筆一組發送
