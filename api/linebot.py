@@ -558,20 +558,24 @@ def handle_message(event):
             line_bot_api.reply_message(event.reply_token, TextSendMessage(text="您已經在預約流程中，請繼續操作。"))
 
     # 處理使用者在 "我要預約" 後輸入的會員編號或姓名
-    elif user_states.get(user_id) == "awaiting_member_check_before_booking":
+    elif user_states.get(user_id) == "awaiting_member_info":
+        user_states.pop(user_id)
         keyword = user_msg.strip()
+    
         try:
-            # 連線到 Google Sheets
             client = get_gspread_client()
-            sheet = client.open_by_key("YOUR_SPREADSHEET_KEY").worksheet("會員資料") # 替換為你的工作表名稱
+            sheet = client.open_by_key("1jVhpPNfB6UrRaYZjCjyDR4GZApjYLL4KZXQ1Si63Zyg").worksheet("會員資料")
             records = sheet.get_all_records()
-
-            member_data = None
-            # 判斷使用者輸入的是會員編號還是姓名 (使用正則表達式判斷是否為會員編號格式)
-            if re.match(r"^[A-Z]\d{5}$", keyword.upper()):
-                # 根據會員編號查找會員資料 (忽略大小寫和前後空白)
+    
+            # 判斷輸入是編號還是姓名
+            if re.match(r"^[A-Z]\d{5}$", keyword.upper()):  # 判斷是 A00001 類型
                 member_data = next(
                     (row for row in records if str(row["會員編號"]).strip().upper() == keyword.upper()),
+                    None
+                )
+            else:
+                member_data = next(
+                    (row for row in records if keyword in row["姓名"]),
                     None
                 )
             else:
