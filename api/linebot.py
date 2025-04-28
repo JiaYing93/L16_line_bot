@@ -537,7 +537,7 @@ def handle_message(event):
         except Exception as e:
             logger.error(f"{user_msg} 分類查詢錯誤：{e}", exc_info=True)
             line_bot_api.reply_message(event.reply_token, TextSendMessage(text="⚠ 發生錯誤，請稍後再試。"))
-        elif user_msg == "我要預約":
+    elif user_msg == "我要預約":
         if user_id not in user_states or not isinstance(user_states[user_id], BookingFSM):
             states = ['start_booking', 'category_selection', 'service_selection', 'date_input', 'time_input', 'confirmation', 'completed', 'cancelled']
             transitions = [
