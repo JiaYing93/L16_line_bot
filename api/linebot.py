@@ -573,12 +573,8 @@ def handle_message(event):
                     (row for row in records if str(row["會員編號"]).strip().upper() == keyword.upper()),
                     None
                 )
+            
             else:
-                member_data = next(
-                    (row for row in records if keyword in row["姓名"]),
-                    None
-                )
-        else:
                 # 根據姓名查找會員資料 (模糊比對，只要輸入包含在姓名中就視為符合)
                 member_data = next(
                     (row for row in records if keyword in row["姓名"]),
