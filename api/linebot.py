@@ -266,16 +266,16 @@ def handle_message(event):
         buttons = [
             MessageAction(label=cat, text=cat)
             for cat in faq_categories
-        ]
-        template = TemplateSendMessage(
+            ]
+            template = TemplateSendMessage(
             alt_text="常見問題分類",
             template=ButtonsTemplate(
                 title="常見問題",
                 text="請選擇分類",
                 actions=buttons[:4]  # ButtonsTemplate 最多只能放 4 個按鈕
             )
-        )
-        line_bot_api.reply_message(event.reply_token, template)
+            )
+            line_bot_api.reply_message(event.reply_token, template)
 
     elif user_msg in ["課程"]:
         confirm_template = TemplateSendMessage(
@@ -517,7 +517,7 @@ def handle_message(event):
             matched = [
                 row for row in records
                 if row.get("類型", "").strip() == "上課教室" and row.get("圖片1", "").startswith("https")
-            ]
+                ]
 
             if not matched:
                 line_bot_api.reply_message(
@@ -548,17 +548,17 @@ def handle_message(event):
         buttons = [
             MessageAction(label=sub, text=sub)
             for sub in subcategories[:4]  # 先顯示前4個
-        ]
+            ]
         # 第二個 bubble 可加更多分類
-        template = TemplateSendMessage(
+            template = TemplateSendMessage(
             alt_text="健身/重訓 器材分類",
             template=ButtonsTemplate(
                 title="健身/重訓 器材分類",
                 text="請選擇器材分類",
                 actions=buttons
             )
-        )
-        line_bot_api.reply_message(event.reply_token, template)
+            )
+            line_bot_api.reply_message(event.reply_token, template)
         
     elif user_msg in ["心肺訓練", "背部訓練", "腿部訓練", "自由重量器材"]:
         try:
@@ -569,7 +569,7 @@ def handle_message(event):
             matched = [
                 row for row in records
                 if row.get("分類", "").strip() == user_msg and row.get("圖片1", "").startswith("https")
-            ]
+                ]
 
             if not matched:
                 line_bot_api.reply_message(
@@ -606,7 +606,7 @@ def handle_message(event):
             matched = [
                 row for row in records
                 if row.get("類型", "").strip() == "上課教室" and row.get("圖片1", "").startswith("https")
-            ]
+                ]
 
             if not matched:
                 line_bot_api.reply_message(
@@ -640,7 +640,7 @@ def handle_message(event):
              matched = [
                  row for row in records
                  if row.get("教練類型", "").strip() == "健身教練" and row.get("圖片", "").startswith("https")
-             ]
+                 ]
  
              if not matched:
                  line_bot_api.reply_message(
@@ -718,17 +718,17 @@ def handle_message(event):
         buttons = [
             MessageAction(label=sub, text=sub)
             for sub in subcategories[:4]  # 先顯示前4個
-        ]
+            ]
         # 第二個 bubble 可加更多分類
-        template = TemplateSendMessage(
+            template = TemplateSendMessage(
             alt_text="課程教練分類",
             template=ButtonsTemplate(
                 title="課程教練分類",
                 text="請選擇課程教練",
                 actions=buttons
             )
-        )
-        line_bot_api.reply_message(event.reply_token, template)
+            )
+            line_bot_api.reply_message(event.reply_token, template)
         
     elif user_msg in ["有氧教練", "瑜珈老師", "游泳教練"]:
          try:
@@ -739,7 +739,7 @@ def handle_message(event):
              matched = [
                  row for row in records
                  if row.get("教練類別", "").strip() == user_msg and row.get("圖片", "").startswith("https")
-             ]
+                 ]
  
              if not matched:
                  line_bot_api.reply_message(
@@ -1022,11 +1022,11 @@ def handle_message(event):
         line_bot_api.reply_message(event.reply_token, TextSendMessage(text="您已經在預約流程中，請繼續操作。"))
 
     elif user_states.get(user_id) == "awaiting_member_check_before_booking":
-         keyword = user_msg.strip()
-         try:
-             client = get_gspread_client()
-             sheet = client.open_by_key("1jVhpPNfB6UrRaYZjCjyDR4GZApjYLL4KZXQ1Si63Zyg").worksheet("會員資料")
-             records = sheet.get_all_records()
+    keyword = user_msg.strip()
+    try:
+        client = get_gspread_client()
+        sheet = client.open_by_key("1jVhpPNfB6UrRaYZjCjyDR4GZApjYLL4KZXQ1Si63Zyg").worksheet("會員資料")
+        records = sheet.get_all_records()
 
         # 判斷輸入是編號還是姓名
         member_data = None
