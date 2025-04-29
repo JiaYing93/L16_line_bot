@@ -1005,7 +1005,7 @@ def handle_message(event):
         )
         line_bot_api.reply_message(event.reply_token, flex_message)
     elif user_msg == "我要預約":
-    if user_id not in user_states or not isinstance(user_states[user_id], BookingFSM):
+        if user_id not in user_states or not isinstance(user_states[user_id], BookingFSM):
         # 先檢查是否已經在等待會員資訊
         if user_states.get(user_id) == "awaiting_member_check_before_booking":
             line_bot_api.reply_message(
