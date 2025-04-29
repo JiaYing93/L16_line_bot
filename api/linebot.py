@@ -275,7 +275,7 @@ def handle_message(event):
     actions=buttons[:4]  # ButtonsTemplate 最多只能放 4 個按鈕
                 )
                 )
-                line_bot_api.reply_message(event.reply_token, template)
+    line_bot_api.reply_message(event.reply_token, template)
 
     elif user_msg in ["課程"]:
         confirm_template = TemplateSendMessage(
