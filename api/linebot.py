@@ -47,16 +47,16 @@ class BookingFSM(GraphMachine):
             self.go_back() # 或切換到錯誤狀態
             return
 
-            buttons = [MessageAction(label=cat, text=cat) for cat in categories]
-            template = TemplateSendMessage(
+        buttons = [MessageAction(label=cat, text=cat) for cat in categories]
+        template = TemplateSendMessage(
             alt_text="請選擇預約類別",
             template=ButtonsTemplate(
-            title="預約選項",
-            text="您想要預約什麼？",
-            actions=buttons
+                title="預約選項",
+                text="您想要預約什麼？",
+                actions=buttons
             )
-            )
-            line_bot_api.reply_message(event.reply_token, template)
+        )
+        line_bot_api.reply_message(event.reply_token, template)
 
     def process_category(self, event):
         self.booking_category = event.message.text
@@ -65,12 +65,12 @@ class BookingFSM(GraphMachine):
             if services:
                 buttons = [MessageAction(label=service, text=service) for service in services]
                 template = TemplateSendMessage(
-                alt_text="請選擇預約項目",
-                template=ButtonsTemplate(
-                title=f"{self.booking_category} 預約",
-                text="您想預約哪個項目？",
-                actions=buttons
-                )
+                    alt_text="請選擇預約項目",
+                    template=ButtonsTemplate(
+                        title=f"{self.booking_category} 預約",
+                        text="您想預約哪個項目？",
+                        actions=buttons
+                    )
                 )
                 line_bot_api.reply_message(event.reply_token, template)
                 self.next_state() # 觸發 ask_service
@@ -119,9 +119,9 @@ class BookingFSM(GraphMachine):
 
                 # 定義類別與試算表工作表名稱的對應關係
                 category_to_sheet = {
-                "團體課程": "課程資料",
-                "私人教練": "教練資料",
-                "場地租借": "場地資料"
+                    "團體課程": "課程資料",
+                    "私人教練": "教練資料",
+                    "場地租借": "場地資料"
                 }
 
                 worksheet_name = category_to_sheet.get(self.booking_category)
@@ -141,8 +141,8 @@ class BookingFSM(GraphMachine):
 
             if self.user_id in user_states:
                 del user_states[self.user_id]
-                self.reset_booking_data() # 預約完成後重置資料
-                self.go_back(2) # 回到初始狀態 (start_booking)
+            self.reset_booking_data() # 預約完成後重置資料
+            self.go_back(2) # 回到初始狀態 (start_booking)
 
         elif event.message.text.lower() == "取消":
             self.trigger("cancel_booking", event)
@@ -153,8 +153,8 @@ class BookingFSM(GraphMachine):
         line_bot_api.reply_message(event.reply_token, TextSendMessage(text="❌ 您的預約已取消。"))
         if self.user_id in user_states:
             del user_states[self.user_id]
-            self.reset_booking_data() # 取消後重置資料
-            self.go_back(2) # 回到初始狀態 (start_booking)
+        self.reset_booking_data() # 取消後重置資料
+        self.go_back(2) # 回到初始狀態 (start_booking)
 
     def send_booking_start_message(self, event):
         line_bot_api.reply_message(event.reply_token, TextSendMessage(text="好的，請按照步驟完成預約。"))
@@ -169,8 +169,8 @@ def get_gspread_client():
             temp_file.write(credentials_content)
             temp_file.flush()
             scope = [
-            "https://spreadsheets.google.com/feeds",
-            "https://www.googleapis.com/auth/drive"
+                "https://spreadsheets.google.com/feeds",
+                "https://www.googleapis.com/auth/drive"
             ]
             creds = ServiceAccountCredentials.from_json_keyfile_name(temp_file.name, scope)
             client = gspread.authorize(creds)
@@ -191,7 +191,7 @@ def callback():
         line_handler.handle(body, signature)
     except InvalidSignatureError:
         abort(400)
-        return "OK"
+    return "OK"
 
 @line_handler.add(MessageEvent, message=TextMessage)
 def handle_message(event):
@@ -201,96 +201,96 @@ def handle_message(event):
     # 會員專區選單
     if user_msg == "會員專區":
         template = TemplateSendMessage(
-        alt_text="會員功能選單",
-        template=ButtonsTemplate(
-        title="會員專區",
-        text="請選擇功能",
-        actions=[
-        MessageAction(label="查詢會員資料", text="查詢會員資料"),
-        ]
-        )
+            alt_text="會員功能選單",
+            template=ButtonsTemplate(
+                title="會員專區",
+                text="請選擇功能",
+                actions=[
+                    MessageAction(label="查詢會員資料", text="查詢會員資料"),
+                ]
+            )
         )
         line_bot_api.reply_message(event.reply_token, template)
 
     elif user_msg == "查詢會員資料":
         user_states[user_id] = "awaiting_member_info"
         line_bot_api.reply_message(
-        event.reply_token,
-        TextSendMessage(text="請輸入您的會員編號或姓名：")
+            event.reply_token,
+            TextSendMessage(text="請輸入您的會員編號或姓名：")
         )
 
     elif user_states.get(user_id) == "awaiting_member_info":
         user_states.pop(user_id)
         keyword = user_msg.strip()
-
+    
         try:
             client = get_gspread_client()
             sheet = client.open_by_key("1jVhpPNfB6UrRaYZjCjyDR4GZApjYLL4KZXQ1Si63Zyg").worksheet("會員資料")
             records = sheet.get_all_records()
-
+    
             # 判斷輸入是編號還是姓名
             if re.match(r"^[A-Z]\d{5}$", keyword.upper()):  # 判斷是 A00001 類型
                 member_data = next(
-                (row for row in records if str(row["會員編號"]).strip().upper() == keyword.upper()),
-                None
+                    (row for row in records if str(row["會員編號"]).strip().upper() == keyword.upper()),
+                    None
                 )
             else:
                 member_data = next(
-                (row for row in records if keyword in row["姓名"]),
-                None
+                    (row for row in records if keyword in row["姓名"]),
+                    None
                 )
             if member_data:
                 reply_text = (
-                f"✅ 查詢成功\n"
-                f"👤 姓名：{member_data['姓名']}\n"
-                f"📱 電話：{member_data['電話']}\n"
-                f"🧾 會員類型：{member_data['會員類型']}\n"
-                f"📌 狀態：{member_data['會員狀態']}\n"
-                f"🎯 點數：{member_data['會員點數']}\n"
-                f"⏳ 到期日：{member_data['會員到期日']}"
+                    f"✅ 查詢成功\n"
+                    f"👤 姓名：{member_data['姓名']}\n"
+                    f"📱 電話：{member_data['電話']}\n"
+                    f"🧾 會員類型：{member_data['會員類型']}\n"
+                    f"📌 狀態：{member_data['會員狀態']}\n"
+                    f"🎯 點數：{member_data['會員點數']}\n"
+                    f"⏳ 到期日：{member_data['會員到期日']}"
                 )
                 flex_message = FlexSendMessage(
-                alt_text=f"{member_data['姓名']}的會員資料",
+                    alt_text=f"{member_data['姓名']}的會員資料",
                 )
             else:
                 reply_text = "❌ 查無此會員資料，請確認後再試一次。"
-
+    
         except Exception as e:
             reply_text = f"❌ 查詢失敗：{str(e)}"
             logger.error(f"會員查詢錯誤：{e}", exc_info=True)
-
-            line_bot_api.reply_message(event.reply_token, TextSendMessage(text=reply_text))
-
+    
+        line_bot_api.reply_message(event.reply_token, TextSendMessage(text=reply_text))
+        
     if user_msg == "常見問題":
         faq_categories = ["準備運動", "會員方案", "課程", "其他"]
         buttons = [
-        MessageAction(label=cat, text=cat)
+            MessageAction(label=cat, text=cat)
             for cat in faq_categories
-                ]
-    template = TemplateSendMessage(
-    alt_text="常見問題分類",
-    template=ButtonsTemplate(
-    title="常見問題",
-    text="請選擇分類",
-    actions=buttons[:4]  # ButtonsTemplate 最多只能放 4 個按鈕
-                )
-                )
-    line_bot_api.reply_message(event.reply_token, template)
+        ]
+        template = TemplateSendMessage(
+            alt_text="常見問題分類",
+            template=ButtonsTemplate(
+                title="常見問題",
+                text="請選擇分類",
+                actions=buttons[:4]  # ButtonsTemplate 最多只能放 4 個按鈕
+            )
+        )
+        line_bot_api.reply_message(event.reply_token, template)
 
     elif user_msg in ["課程"]:
         confirm_template = TemplateSendMessage(
-        alt_text = 'confirm template',
-        template = ConfirmTemplate(
-        text = '🧾',
-        actions = [
-        MessageAction(
-        label = '個人教練',
-        text = '個人教練課程'),
-        MessageAction(
-        label = '團體',
-        text = '團體課程')]
-        )
-        )
+            alt_text = 'confirm template',
+            template = ConfirmTemplate(
+                text = '🧾',
+                actions = [
+                    MessageAction(
+                        label = '個人教練',
+                        text = '個人教練課程'),
+                    MessageAction(
+                        label = '團體',
+                        text = '團體課程')]
+                )
+            )
         line_bot_api.reply_message(event.reply_token, confirm_template)
 
     elif user_msg in ["準備運動", "會員方案", "個人教練課程", "團體課程", "其他"]:
@@ -304,207 +304,207 @@ def handle_message(event):
                 line_bot_api.reply_message(event.reply_token, TextSendMessage(text="找不到相關問題。"))
                 return
 
-                bubbles = []
+            bubbles = []
             for item in matched:
                 bubble = {
-                "type": "bubble",
-                "size": "mega",
-                "body": {
-                "type": "box",
-                "layout": "vertical",
-                "spacing": "sm",
-                "contents": [
-                {
-                "type": "text",
-                "text": f"❓ {item['問題']}",
-                "wrap": True,
-                "weight": "bold",
-                "size": "md",
-                "color": "#333333"
-                },
-                {
-                "type": "text",
-                "text": f"💡 {item['答覆']}",
-                "wrap": True,
-                "size": "sm",
-                "color": "#666666"
-                }
-                ]
-                }
+                    "type": "bubble",
+                    "size": "mega",
+                    "body": {
+                        "type": "box",
+                        "layout": "vertical",
+                        "spacing": "sm",
+                        "contents": [
+                            {
+                                "type": "text",
+                                "text": f"❓ {item['問題']}",
+                                "wrap": True,
+                                "weight": "bold",
+                                "size": "md",
+                                "color": "#333333"
+                            },
+                            {
+                                "type": "text",
+                                "text": f"💡 {item['答覆']}",
+                                "wrap": True,
+                                "size": "sm",
+                                "color": "#666666"
+                            }
+                        ]
+                    }
                 }
                 bubbles.append(bubble)
 
-                flex_message = FlexSendMessage(
+            flex_message = FlexSendMessage(
                 alt_text=f"{user_msg} 的常見問題",
                 contents={
-                "type": "carousel",
-                "contents": bubbles[:10]  # 最多 10 筆
+                    "type": "carousel",
+                    "contents": bubbles[:10]  # 最多 10 筆
                 }
-                )
-                line_bot_api.reply_message(event.reply_token, flex_message)
+            )
+            line_bot_api.reply_message(event.reply_token, flex_message)
 
         except Exception as e:
             logger.error(f"常見問題查詢錯誤：{e}", exc_info=True)
             line_bot_api.reply_message(event.reply_token, TextSendMessage(text="⚠ 查詢失敗，請稍後再試。"))
-
+            
     elif user_msg == "更多功能":
         flex_message = FlexSendMessage(
-        alt_text="更多功能選單",
-        contents={
-        "type": "carousel",
-        "contents": [
-        {
-        "type": "bubble",
-        "hero": {
-        "type": "image",
-        "url": "https://i.imgur.com/d3v7RxR.png",  # 替換為場地圖片
-        "size": "full",
-        "aspectRatio": "20:13",
-        "aspectMode": "cover"
-        },
-        "body": {
-        "type": "box",
-        "layout": "vertical",
-        "contents": [
-        {
-        "type": "text",
-        "text": "🏟️ 場地介紹",
-        "weight": "bold",
-        "size": "xl"
-        },
-        {
-        "type": "text",
-        "text": "探索我們的健身空間",
-        "size": "sm",
-        "wrap": True,
-        "color": "#666666"
-        }
-        ]
-        },
-        "footer": {
-        "type": "box",
-        "layout": "horizontal",
-        "spacing": "sm",
-        "contents": [
-        {
-        "type": "button",
-        "action": {
-        "type": "message",
-        "label": "健身/重訓",
-        "text": "健身/重訓"
-        },
-        "style": "primary"
-        },
-        {
-        "type": "button",
-        "action": {
-        "type": "message",
-        "label": "上課教室",
-        "text": "上課教室"
-        }
-        }
-        ]
-        }
-        },
-        {
-        "type": "bubble",
-        "hero": {
-        "type": "image",
-        "url": "https://i.imgur.com/HrtfSdH.png",  # 替換為課程圖片
-        "size": "full",
-        "aspectRatio": "20:13",
-        "aspectMode": "cover"
-        },
-        "body": {
-        "type": "box",
-        "layout": "vertical",
-        "contents": [
-        {
-        "type": "text",
-        "text": "📚 課程介紹",
-        "weight": "bold",
-        "size": "xl"
-        },
-        {
-        "type": "text",
-        "text": "了解我們提供的課程類型",
-        "size": "sm",
-        "wrap": True,
-        "color": "#666666"
-        }
-        ]
-        },
-        "footer": {
-        "type": "box",
-        "layout": "vertical",
-        "contents": [
-        {
-        "type": "button",
-        "action": {
-        "type": "message",
-        "label": "查看課程內容",
-        "text": "課程內容"
-        },
-        "style": "primary"
-        }
-        ]
-        }
-        },
-        {
-        "type": "bubble",
-        "hero": {
-        "type": "image",
-        "url": "https://i.imgur.com/izThqNv.png",  # 替換為團隊圖片
-        "size": "full",
-        "aspectRatio": "20:13",
-        "aspectMode": "cover"
-        },
-        "body": {
-        "type": "box",
-        "layout": "vertical",
-        "contents": [
-        {
-        "type": "text",
-        "text": "👥 團隊介紹",
-        "weight": "bold",
-        "size": "xl"
-        },
-        {
-        "type": "text",
-        "text": "認識我們的教練與團隊",
-        "size": "sm",
-        "wrap": True,
-        "color": "#666666"
-        }
-        ]
-        },
-        "footer": {
-        "type": "box",
-        "layout": "horizontal",
-        "spacing": "sm",
-        "contents": [
-        {
-        "type": "button",
-        "action": {
-        "type": "message",
-        "label": "健身教練",
-        "text": "健身教練"
-        },
-        "style": "primary"
-        },
-        {
-        "type": "button",
-        "action": {
-        "type": "message",
-        "label": "課程老師",
-        "text": "課程老師"
-        }
-        }
-        ]
-        }
-        }
-        ]
-        }
+            alt_text="更多功能選單",
+            contents={
+                "type": "carousel",
+                "contents": [
+                    {
+                        "type": "bubble",
+                        "hero": {
+                            "type": "image",
+                            "url": "https://i.imgur.com/d3v7RxR.png",  # 替換為場地圖片
+                            "size": "full",
+                            "aspectRatio": "20:13",
+                            "aspectMode": "cover"
+                        },
+                        "body": {
+                            "type": "box",
+                            "layout": "vertical",
+                            "contents": [
+                                {
+                                    "type": "text",
+                                    "text": "🏟️ 場地介紹",
+                                    "weight": "bold",
+                                    "size": "xl"
+                                },
+                                {
+                                    "type": "text",
+                                    "text": "探索我們的健身空間",
+                                    "size": "sm",
+                                    "wrap": True,
+                                    "color": "#666666"
+                                }
+                            ]
+                        },
+                        "footer": {
+                            "type": "box",
+                            "layout": "horizontal",
+                            "spacing": "sm",
+                            "contents": [
+                                {
+                                    "type": "button",
+                                    "action": {
+                                        "type": "message",
+                                        "label": "健身/重訓",
+                                        "text": "健身/重訓"
+                                    },
+                                    "style": "primary"
+                                },
+                                {
+                                    "type": "button",
+                                    "action": {
+                                        "type": "message",
+                                        "label": "上課教室",
+                                        "text": "上課教室"
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    {
+                        "type": "bubble",
+                        "hero": {
+                            "type": "image",
+                            "url": "https://i.imgur.com/HrtfSdH.png",  # 替換為課程圖片
+                            "size": "full",
+                            "aspectRatio": "20:13",
+                            "aspectMode": "cover"
+                        },
+                        "body": {
+                            "type": "box",
+                            "layout": "vertical",
+                            "contents": [
+                                {
+                                    "type": "text",
+                                    "text": "📚 課程介紹",
+                                    "weight": "bold",
+                                    "size": "xl"
+                                },
+                                {
+                                    "type": "text",
+                                    "text": "了解我們提供的課程類型",
+                                    "size": "sm",
+                                    "wrap": True,
+                                    "color": "#666666"
+                                }
+                            ]
+                        },
+                        "footer": {
+                            "type": "box",
+                            "layout": "vertical",
+                            "contents": [
+                                {
+                                    "type": "button",
+                                    "action": {
+                                        "type": "message",
+                                        "label": "查看課程內容",
+                                        "text": "課程內容"
+                                    },
+                                    "style": "primary"
+                                }
+                            ]
+                        }
+                    },
+                    {
+                        "type": "bubble",
+                        "hero": {
+                            "type": "image",
+                            "url": "https://i.imgur.com/izThqNv.png",  # 替換為團隊圖片
+                            "size": "full",
+                            "aspectRatio": "20:13",
+                            "aspectMode": "cover"
+                        },
+                        "body": {
+                            "type": "box",
+                            "layout": "vertical",
+                            "contents": [
+                                {
+                                    "type": "text",
+                                    "text": "👥 團隊介紹",
+                                    "weight": "bold",
+                                    "size": "xl"
+                                },
+                                {
+                                    "type": "text",
+                                    "text": "認識我們的教練與團隊",
+                                    "size": "sm",
+                                    "wrap": True,
+                                    "color": "#666666"
+                                }
+                            ]
+                        },
+                        "footer": {
+                            "type": "box",
+                            "layout": "horizontal",
+                            "spacing": "sm",
+                            "contents": [
+                                {
+                                    "type": "button",
+                                    "action": {
+                                        "type": "message",
+                                        "label": "健身教練",
+                                        "text": "健身教練"
+                                    },
+                                    "style": "primary"
+                                },
+                                {
+                                    "type": "button",
+                                    "action": {
+                                        "type": "message",
+                                        "label": "課程老師",
+                                        "text": "課程老師"
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                ]
+            }
         )
         line_bot_api.reply_message(event.reply_token, flex_message)
 
@@ -515,51 +515,51 @@ def handle_message(event):
             records = sheet.get_all_records()
 
             matched = [
-            row for row in records
+                row for row in records
                 if row.get("類型", "").strip() == "上課教室" and row.get("圖片1", "").startswith("https")
-                    ]
+            ]
 
             if not matched:
                 line_bot_api.reply_message(
-                event.reply_token, TextSendMessage(text="⚠ 查無『上課教室』的場地資料")
+                    event.reply_token, TextSendMessage(text="⚠ 查無『上課教室』的場地資料")
                 )
                 return
 
-                image_columns = [
+            image_columns = [
                 ImageCarouselColumn(
-                image_url=row["圖片1"],
-                action=MessageAction(label=row.get("名稱", "查看詳情"), text=row.get("名稱", "查看詳情"))
+                    image_url=row["圖片1"],
+                    action=MessageAction(label=row.get("名稱", "查看詳情"), text=row.get("名稱", "查看詳情"))
                 ) for row in matched
-                ]
+            ]
 
-                carousel = TemplateSendMessage(
+            carousel = TemplateSendMessage(
                 alt_text="上課教室場地列表",
                 template=ImageCarouselTemplate(columns=image_columns[:10])
-                )
-                line_bot_api.reply_message(event.reply_token, carousel)
+            )
+            line_bot_api.reply_message(event.reply_token, carousel)
 
         except Exception as e:
             logger.error(f"上課教室查詢失敗：{e}", exc_info=True)
             line_bot_api.reply_message(event.reply_token, TextSendMessage(text=f"⚠ 發生錯誤：{e}"))
-
+            
     elif user_msg == "健身/重訓":
         # 顯示分類選單（按鈕）
         subcategories = ["心肺訓練", "背部訓練", "腿部訓練", "自由重量器材"]
         buttons = [
-        MessageAction(label=sub, text=sub)
+            MessageAction(label=sub, text=sub)
             for sub in subcategories[:4]  # 先顯示前4個
-                ]
+        ]
         # 第二個 bubble 可加更多分類
-                template = TemplateSendMessage(
-                alt_text="健身/重訓 器材分類",
-                template=ButtonsTemplate(
+        template = TemplateSendMessage(
+            alt_text="健身/重訓 器材分類",
+            template=ButtonsTemplate(
                 title="健身/重訓 器材分類",
                 text="請選擇器材分類",
                 actions=buttons
-                )
-                )
-                line_bot_api.reply_message(event.reply_token, template)
-
+            )
+        )
+        line_bot_api.reply_message(event.reply_token, template)
+        
     elif user_msg in ["心肺訓練", "背部訓練", "腿部訓練", "自由重量器材"]:
         try:
             client = get_gspread_client()
@@ -567,30 +567,30 @@ def handle_message(event):
             records = sheet.get_all_records()
 
             matched = [
-            row for row in records
+                row for row in records
                 if row.get("分類", "").strip() == user_msg and row.get("圖片1", "").startswith("https")
-                    ]
+            ]
 
             if not matched:
                 line_bot_api.reply_message(
-                event.reply_token, TextSendMessage(text=f"⚠ 查無『{user_msg}』分類的器材圖片")
+                    event.reply_token, TextSendMessage(text=f"⚠ 查無『{user_msg}』分類的器材圖片")
                 )
-
+                
                 return
 
             # 每 10 筆一組發送
             for i in range(0, len(matched), 10):
                 chunk = matched[i:i + 10]
                 image_columns = [
-                ImageCarouselColumn(
-                image_url=row["圖片1"],
-                action=MessageAction(label=row.get("名稱", "查看詳情"), text=row.get("名稱", "查看詳情"))
-                ) for row in chunk
+                    ImageCarouselColumn(
+                        image_url=row["圖片1"],
+                        action=MessageAction(label=row.get("名稱", "查看詳情"), text=row.get("名稱", "查看詳情"))
+                    ) for row in chunk
                 ]
 
                 carousel = TemplateSendMessage(
-                alt_text=f"{user_msg} 器材圖片",
-                template=ImageCarouselTemplate(columns=image_columns)
+                    alt_text=f"{user_msg} 器材圖片",
+                    template=ImageCarouselTemplate(columns=image_columns)
                 )
                 line_bot_api.reply_message(event.reply_token, carousel)
 
@@ -604,110 +604,110 @@ def handle_message(event):
             records = sheet.get_all_records()
 
             matched = [
-            row for row in records
+                row for row in records
                 if row.get("類型", "").strip() == "上課教室" and row.get("圖片1", "").startswith("https")
-                    ]
+            ]
 
             if not matched:
                 line_bot_api.reply_message(
-                event.reply_token, TextSendMessage(text="⚠ 查無『上課教室』的場地資料")
+                    event.reply_token, TextSendMessage(text="⚠ 查無『上課教室』的場地資料")
                 )
                 return
 
-                image_columns = [
+            image_columns = [
                 ImageCarouselColumn(
-                image_url=row["圖片1"],
-                action=MessageAction(label=row.get("名稱", "查看詳情"), text=row.get("名稱", "查看詳情"))
+                    image_url=row["圖片1"],
+                    action=MessageAction(label=row.get("名稱", "查看詳情"), text=row.get("名稱", "查看詳情"))
                 ) for row in matched
-                ]
+            ]
 
-                carousel = TemplateSendMessage(
+            carousel = TemplateSendMessage(
                 alt_text="上課教室場地列表",
                 template=ImageCarouselTemplate(columns=image_columns[:10])
-                )
-                line_bot_api.reply_message(event.reply_token, carousel)
+            )
+            line_bot_api.reply_message(event.reply_token, carousel)
 
         except Exception as e:
             logger.error(f"上課教室查詢失敗：{e}", exc_info=True)
             line_bot_api.reply_message(event.reply_token, TextSendMessage(text=f"⚠ 發生錯誤：{e}"))
-
+            
     elif user_msg == "健身教練":
          try:
              client = get_gspread_client()
              sheet = client.open_by_key("1jVhpPNfB6UrRaYZjCjyDR4GZApjYLL4KZXQ1Si63Zyg").worksheet("教練資料")
              records = sheet.get_all_records()
-
+ 
              matched = [
-             row for row in records
+                 row for row in records
                  if row.get("教練類型", "").strip() == "健身教練" and row.get("圖片", "").startswith("https")
-                     ]
-
+             ]
+ 
              if not matched:
                  line_bot_api.reply_message(
-                 event.reply_token, TextSendMessage(text="⚠ 查無『健身教練』的資料")
+                     event.reply_token, TextSendMessage(text="⚠ 查無『健身教練』的資料")
                  )
                  return
-
-                 bubbles = []
+ 
+             bubbles = []
              for row in matched:
                  bubble = {
-                 "type": "bubble",
-                 "hero": {
-                 "type": "image",
-                 "url": row["圖片"],
-                 "size": "full",
-                 "aspectRatio": "20:13",
-                 "aspectMode": "cover"
-                 },
-                 "body": {
-                 "type": "box",
-                 "layout": "vertical",
-                 "spacing": "sm",
-                 "contents": [
-                 {
-                 "type": "text",
-                 "text": f"{row['姓名']}（{row['教練類別']}）",
-                 "weight": "bold",
-                 "size": "lg",
-                 "wrap": True
-                 },
-                 {
-                 "type": "text",
-                 "text": f"專長：{row.get('專長', '未提供')}",
-                 "size": "sm",
-                 "wrap": True,
-                 "color": "#666666"
-                 }
-                 ]
-                 },
-                 "footer": {
-                 "type": "box",
-                 "layout": "vertical",
-                 "spacing": "sm",
-                 "contents": [
-                 {
-                 "type": "button",
-                 "style": "primary",
-                 "action": {
-                 "type": "message",
-                 "label": "立即預約",
-                 "text": f"我要預約 {row['姓名']}"
-                 }
-                 }
-                 ]
-                 }
+                     "type": "bubble",
+                     "hero": {
+                         "type": "image",
+                         "url": row["圖片"],
+                         "size": "full",
+                         "aspectRatio": "20:13",
+                         "aspectMode": "cover"
+                     },
+                     "body": {
+                         "type": "box",
+                         "layout": "vertical",
+                         "spacing": "sm",
+                         "contents": [
+                             {
+                                 "type": "text",
+                                 "text": f"{row['姓名']}（{row['教練類別']}）",
+                                 "weight": "bold",
+                                 "size": "lg",
+                                 "wrap": True
+                             },
+                             {
+                                 "type": "text",
+                                 "text": f"專長：{row.get('專長', '未提供')}",
+                                 "size": "sm",
+                                 "wrap": True,
+                                 "color": "#666666"
+                             }
+                         ]
+                     },
+                     "footer": {
+                         "type": "box",
+                         "layout": "vertical",
+                         "spacing": "sm",
+                         "contents": [
+                             {
+                                 "type": "button",
+                                 "style": "primary",
+                                 "action": {
+                                     "type": "message",
+                                     "label": "立即預約",
+                                     "text": f"我要預約 {row['姓名']}"
+                                 }
+                             }
+                         ]
+                     }
                  }
                  bubbles.append(bubble)
-
-                 flex_message = FlexSendMessage(
+ 
+             flex_message = FlexSendMessage(
                  alt_text="健身教練清單",
                  contents={
-                 "type": "carousel",
-                 "contents": bubbles[:10]
+                     "type": "carousel",
+                     "contents": bubbles[:10]
                  }
-                 )
-                 line_bot_api.reply_message(event.reply_token, flex_message)
-
+             )
+             line_bot_api.reply_message(event.reply_token, flex_message)
+ 
          except Exception as e:
              logger.error(f"健身教練查詢失敗：{e}", exc_info=True)
              line_bot_api.reply_message(event.reply_token, TextSendMessage(text=f"⚠ 發生錯誤：{e}"))
@@ -716,101 +716,101 @@ def handle_message(event):
         # 顯示分類選單（按鈕）
         subcategories = ["有氧教練", "瑜珈老師", "游泳教練"]
         buttons = [
-        MessageAction(label=sub, text=sub)
+            MessageAction(label=sub, text=sub)
             for sub in subcategories[:4]  # 先顯示前4個
-                ]
+        ]
         # 第二個 bubble 可加更多分類
-                template = TemplateSendMessage(
-                alt_text="課程教練分類",
-                template=ButtonsTemplate(
+        template = TemplateSendMessage(
+            alt_text="課程教練分類",
+            template=ButtonsTemplate(
                 title="課程教練分類",
                 text="請選擇課程教練",
                 actions=buttons
-                )
-                )
-                line_bot_api.reply_message(event.reply_token, template)
-
+            )
+        )
+        line_bot_api.reply_message(event.reply_token, template)
+        
     elif user_msg in ["有氧教練", "瑜珈老師", "游泳教練"]:
          try:
              client = get_gspread_client()
              sheet = client.open_by_key("1jVhpPNfB6UrRaYZjCjyDR4GZApjYLL4KZXQ1Si63Zyg").worksheet("教練資料")
              records = sheet.get_all_records()
-
+ 
              matched = [
-             row for row in records
+                 row for row in records
                  if row.get("教練類別", "").strip() == user_msg and row.get("圖片", "").startswith("https")
-                     ]
-
+             ]
+ 
              if not matched:
                  line_bot_api.reply_message(
-                 event.reply_token, TextSendMessage(text="⚠ 查無『{user_msg}』的資料")
+                     event.reply_token, TextSendMessage(text="⚠ 查無『{user_msg}』的資料")
                  )
                  return
-
-                 bubbles = []
+ 
+             bubbles = []
              for row in matched:
                  bubble = {
-                 "type": "bubble",
-                 "hero": {
-                 "type": "image",
-                 "url": row["圖片"],
-                 "size": "full",
-                 "aspectRatio": "20:13",
-                 "aspectMode": "cover"
-                 },
-                 "body": {
-                 "type": "box",
-                 "layout": "vertical",
-                 "spacing": "sm",
-                 "contents": [
-                 {
-                 "type": "text",
-                 "text": f"{row['姓名']}（{row['教練類別']}）",
-                 "weight": "bold",
-                 "size": "lg",
-                 "wrap": True
-                 },
-                 {
-                 "type": "text",
-                 "text": f"專長：{row.get('專長', '未提供')}",
-                 "size": "sm",
-                 "wrap": True,
-                 "color": "#666666"
-                 }
-                 ]
-                 },
-                 "footer": {
-                 "type": "box",
-                 "layout": "vertical",
-                 "spacing": "sm",
-                 "contents": [
-                 {
-                 "type": "button",
-                 "style": "primary",
-                 "action": {
-                 "type": "message",
-                 "label": "立即預約",
-                 "text": f"我要預約 {row['姓名']}"
-                 }
-                 }
-                 ]
-                 }
+                     "type": "bubble",
+                     "hero": {
+                         "type": "image",
+                         "url": row["圖片"],
+                         "size": "full",
+                         "aspectRatio": "20:13",
+                         "aspectMode": "cover"
+                     },
+                     "body": {
+                         "type": "box",
+                         "layout": "vertical",
+                         "spacing": "sm",
+                         "contents": [
+                             {
+                                 "type": "text",
+                                 "text": f"{row['姓名']}（{row['教練類別']}）",
+                                 "weight": "bold",
+                                 "size": "lg",
+                                 "wrap": True
+                             },
+                             {
+                                 "type": "text",
+                                 "text": f"專長：{row.get('專長', '未提供')}",
+                                 "size": "sm",
+                                 "wrap": True,
+                                 "color": "#666666"
+                             }
+                         ]
+                     },
+                     "footer": {
+                         "type": "box",
+                         "layout": "vertical",
+                         "spacing": "sm",
+                         "contents": [
+                             {
+                                 "type": "button",
+                                 "style": "primary",
+                                 "action": {
+                                     "type": "message",
+                                     "label": "立即預約",
+                                     "text": f"我要預約 {row['姓名']}"
+                                 }
+                             }
+                         ]
+                     }
                  }
                  bubbles.append(bubble)
-
-                 flex_message = FlexSendMessage(
+ 
+             flex_message = FlexSendMessage(
                  alt_text="課程教練清單",
                  contents={
-                 "type": "carousel",
-                 "contents": bubbles[:10]
+                     "type": "carousel",
+                     "contents": bubbles[:10]
                  }
-                 )
-                 line_bot_api.reply_message(event.reply_token, flex_message)
-
+             )
+             line_bot_api.reply_message(event.reply_token, flex_message)
+ 
          except Exception as e:
              logger.error(f"課程教練查詢失敗：{e}", exc_info=True)
              line_bot_api.reply_message(event.reply_token, TextSendMessage(text=f"⚠ 發生錯誤：{e}"))
-
+            
     elif user_msg == "課程內容":
         try:
             client = get_gspread_client()
@@ -823,52 +823,52 @@ def handle_message(event):
 
             # 建立按鈕
             buttons = [
-            {
-            "type": "button",
-            "style": "secondary",
-            "action": {
-            "type": "message",
-            "label": t,
-            "text": t
-            }
-            } for t in course_types[:6]
+                {
+                    "type": "button",
+                    "style": "secondary",
+                    "action": {
+                        "type": "message",
+                        "label": t,
+                        "text": t
+                    }
+                } for t in course_types[:6]
             ]
 
             bubble = {
-            "type": "bubble",
-            "body": {
-            "type": "box",
-            "layout": "vertical",
-            "contents": [
-            {
-            "type": "text",
-            "text": "📚 課程內容查詢",
-            "weight": "bold",
-            "size": "lg",
-            "margin": "md"
-            },
-            {
-            "type": "box",
-            "layout": "vertical",
-            "spacing": "sm",
-            "margin": "lg",
-            "contents": buttons
-            }
-            ]
-            }
+                "type": "bubble",
+                "body": {
+                    "type": "box",
+                    "layout": "vertical",
+                    "contents": [
+                        {
+                            "type": "text",
+                            "text": "📚 課程內容查詢",
+                            "weight": "bold",
+                            "size": "lg",
+                            "margin": "md"
+                        },
+                        {
+                            "type": "box",
+                            "layout": "vertical",
+                            "spacing": "sm",
+                            "margin": "lg",
+                            "contents": buttons
+                        }
+                    ]
+                }
             }
 
             flex_msg = FlexSendMessage(
-            alt_text="課程類型查詢",
-            contents=bubble
+                alt_text="課程類型查詢",
+                contents=bubble
             )
 
             line_bot_api.reply_message(
-            event.reply_token,
-            [
-            flex_msg,
-            TextSendMessage(text="📅 你也可以輸入日期（例如：2025-05-01）查詢當天開課課程。")
-            ]
+                event.reply_token,
+                [
+                    flex_msg,
+                    TextSendMessage(text="📅 你也可以輸入日期（例如：2025-05-01）查詢當天開課課程。")
+                ]
             )
 
         except Exception as e:
@@ -887,38 +887,38 @@ def handle_message(event):
                 line_bot_api.reply_message(event.reply_token, TextSendMessage(text=f"❌ 查無『{user_msg}』相關課程"))
                 return
 
-                bubbles = []
+            bubbles = []
             for row in matched[:10]:
                 bubbles.append({
-                "type": "bubble",
-                "body": {
-                "type": "box",
-                "layout": "vertical",
-                "spacing": "sm",
-                "contents": [
-                {"type": "text", "text": row.get("課程名稱", "（未提供課程名稱）"), "weight": "bold", "size": "lg", "wrap": True},
-                {"type": "text", "text": f"👨‍🏫 教練：{row.get('教練姓名', '未知')}", "size": "sm", "wrap": True},
-                {"type": "text", "text": f"📅 開課日期：{row.get('開始日期', '未提供')}", "size": "sm"},
-                {"type": "text", "text": f"🕒 上課時間：{row.get('上課時間', '未提供')}", "size": "sm"},
-                {"type": "text", "text": f"⏱️ 時間：{row.get('時間', '未提供')}", "size": "sm"},
-                {"type": "text", "text": f"💲 價格：{row.get('課程價格', '未定')}", "size": "sm"}
-                ]
-                }
+                    "type": "bubble",
+                    "body": {
+                        "type": "box",
+                        "layout": "vertical",
+                        "spacing": "sm",
+                        "contents": [
+                            {"type": "text", "text": row.get("課程名稱", "（未提供課程名稱）"), "weight": "bold", "size": "lg", "wrap": True},
+                            {"type": "text", "text": f"👨‍🏫 教練：{row.get('教練姓名', '未知')}", "size": "sm", "wrap": True},
+                            {"type": "text", "text": f"📅 開課日期：{row.get('開始日期', '未提供')}", "size": "sm"},
+                            {"type": "text", "text": f"🕒 上課時間：{row.get('上課時間', '未提供')}", "size": "sm"},
+                            {"type": "text", "text": f"⏱️ 時間：{row.get('時間', '未提供')}", "size": "sm"},
+                            {"type": "text", "text": f"💲 價格：{row.get('課程價格', '未定')}", "size": "sm"}
+                        ]
+                    }
                 })
 
-                line_bot_api.reply_message(
+            line_bot_api.reply_message(
                 event.reply_token,
                 FlexSendMessage(
-                alt_text=f"{user_msg} 課程內容",
-                contents={"type": "carousel", "contents": bubbles}
+                    alt_text=f"{user_msg} 課程內容",
+                    contents={"type": "carousel", "contents": bubbles}
                 )
-                )
+            )
 
         except Exception as e:
             logger.error(f"課程類型查詢錯誤：{e}", exc_info=True)
             line_bot_api.reply_message(
-            event.reply_token,
-            TextSendMessage(text=f"⚠ 無法查詢課程內容（錯誤：{str(e)}）")
+                event.reply_token,
+                TextSendMessage(text=f"⚠ 無法查詢課程內容（錯誤：{str(e)}）")
             )
 
     elif re.match(r"^\d{4}[-/]\d{2}[-/]\d{2}$", user_msg):
@@ -934,96 +934,96 @@ def handle_message(event):
                 line_bot_api.reply_message(event.reply_token, TextSendMessage(text="❌ 該日期無任何課程"))
                 return
 
-                bubbles = []
+            bubbles = []
             for row in matched[:10]:
                 bubbles.append({
-                "type": "bubble",
-                "body": {
-                "type": "box",
-                "layout": "vertical",
-                "spacing": "sm",
-                "contents": [
-                {"type": "text", "text": row.get("課程名稱", "（未提供課程名稱）"), "weight": "bold", "size": "lg", "wrap": True},
-                {"type": "text", "text": f"👨‍🏫 教練：{row.get('教練姓名', '未知')}", "size": "sm", "wrap": True},
-                {"type": "text", "text": f"📅 開課日期：{row.get('開始日期', '未提供')}", "size": "sm"},
-                {"type": "text", "text": f"🕒 上課時間：{row.get('上課時間', '未提供')}", "size": "sm"},
-                {"type": "text", "text": f"⏱️ 時間：{row.get('時間', '未提供')}", "size": "sm"},
-                {"type": "text", "text": f"💲 價格：{row.get('課程價格', '未定')}", "size": "sm"}
-                ]
-                }
+                    "type": "bubble",
+                    "body": {
+                        "type": "box",
+                        "layout": "vertical",
+                        "spacing": "sm",
+                        "contents": [
+                            {"type": "text", "text": row.get("課程名稱", "（未提供課程名稱）"), "weight": "bold", "size": "lg", "wrap": True},
+                            {"type": "text", "text": f"👨‍🏫 教練：{row.get('教練姓名', '未知')}", "size": "sm", "wrap": True},
+                            {"type": "text", "text": f"📅 開課日期：{row.get('開始日期', '未提供')}", "size": "sm"},
+                            {"type": "text", "text": f"🕒 上課時間：{row.get('上課時間', '未提供')}", "size": "sm"},
+                            {"type": "text", "text": f"⏱️ 時間：{row.get('時間', '未提供')}", "size": "sm"},
+                            {"type": "text", "text": f"💲 價格：{row.get('課程價格', '未定')}", "size": "sm"}
+                        ]
+                    }
                 })
 
-                line_bot_api.reply_message(
+            line_bot_api.reply_message(
                 event.reply_token,
                 FlexSendMessage(
-                alt_text=f"{query_date} 的課程",
-                contents={"type": "carousel", "contents": bubbles}
+                    alt_text=f"{query_date} 的課程",
+                    contents={"type": "carousel", "contents": bubbles}
                 )
-                )
+            )
 
         except Exception as e:
             logger.error(f"課程日期查詢錯誤：{e}", exc_info=True)
             line_bot_api.reply_message(
-            event.reply_token,
-            TextSendMessage(text=f"⚠ 無法查詢課程內容（錯誤訊息：{str(e)}）")
+                event.reply_token,
+                TextSendMessage(text=f"⚠ 無法查詢課程內容（錯誤訊息：{str(e)}）")
             )
 
     elif user_msg == "健身紀錄":
         liff_url = "https://liffweb.vercel.app/"  # 這是新專案上線的網址
         flex_message = FlexSendMessage(
-        alt_text="健身紀錄",
-        contents={
-        "type": "bubble",
-        "hero": {
-        "type": "image",
-        "url": "https://example.com/your_new_image.jpg",  # 替換成您的新圖片網址
-        "size": "full",
-        "aspectRatio": "20:13",
-        "aspectMode": "cover",
-        "action": {
-        "type": "uri",
-        "uri": liff_url
-        }
-        },
-        "body": {
-        "type": "box",
-        "layout": "vertical",
-        "contents": [
-        {
-        "type": "button",
-        "style": "primary",
-        "height": "md",
-        "action": {
-        "type": "uri",
-        "label": "開始記錄今日健身！",
-        "uri": liff_url
-        }
-        }
-        ]
-        }
-        }
+            alt_text="健身紀錄",
+            contents={
+                "type": "bubble",
+                "hero": {
+                    "type": "image",
+                    "url": "https://example.com/your_new_image.jpg",  # 替換成您的新圖片網址
+                    "size": "full",
+                    "aspectRatio": "20:13",
+                    "aspectMode": "cover",
+                    "action": {
+                        "type": "uri",
+                        "uri": liff_url
+                    }
+                },
+                "body": {
+                    "type": "box",
+                    "layout": "vertical",
+                    "contents": [
+                        {
+                            "type": "button",
+                            "style": "primary",
+                            "height": "md",
+                            "action": {
+                                "type": "uri",
+                                "label": "開始記錄今日健身！",
+                                "uri": liff_url
+                            }
+                        }
+                    ]
+                }
+            }
         )
         line_bot_api.reply_message(event.reply_token, flex_message)
     elif user_msg == "我要預約":
-       if user_id not in user_states or not isinstance(user_states[user_id], BookingFSM):
+        if user_id not in user_states or not isinstance(user_states[user_id], BookingFSM):
         # 先檢查是否已經在等待會員資訊
-          if user_states.get(user_id) == "awaiting_member_check_before_booking":
-              line_bot_api.reply_message(
-              event.reply_token,
-              TextSendMessage(text="請先輸入您的會員編號或姓名以進行驗證。")
-              )
-          else:
-              user_states[user_id] = "awaiting_member_check_before_booking"
-              line_bot_api.reply_message(
-              event.reply_token,
-              TextSendMessage(text="您好，請先輸入您的會員編號或姓名以進行預約。")
-              )
-       else:
-           line_bot_api.reply_message(event.reply_token, TextSendMessage(text="您已經在預約流程中，請繼續操作。"))
+            if user_states.get(user_id) == "awaiting_member_check_before_booking":
+                line_bot_api.reply_message(
+                event.reply_token,
+                TextSendMessage(text="請先輸入您的會員編號或姓名以進行驗證。")
+            )
+            else:
+                user_states[user_id] = "awaiting_member_check_before_booking"
+                line_bot_api.reply_message(
+                event.reply_token,
+                TextSendMessage(text="您好，請先輸入您的會員編號或姓名以進行預約。")
+            )
+        else:
+            line_bot_api.reply_message(event.reply_token, TextSendMessage(text="您已經在預約流程中，請繼續操作。"))
 
     elif user_states.get(user_id) == "awaiting_member_check_before_booking":
-        keyword = user_msg.strip()
-    try:
+         keyword = user_msg.strip()
+        try:
         client = get_gspread_client()
         sheet = client.open_by_key("1jVhpPNfB6UrRaYZjCjyDR4GZApjYLL4KZXQ1Si63Zyg").worksheet("會員資料")
         records = sheet.get_all_records()
@@ -1032,35 +1032,35 @@ def handle_message(event):
         member_data = None
         if re.match(r"^[A-Z]\d{5}$", keyword.upper()):  # 判斷是 A00001 類型
             member_data = next(
-            (row for row in records if str(row["會員編號"]).strip().upper() == keyword.upper()),
-            None
+                (row for row in records if str(row["會員編號"]).strip().upper() == keyword.upper()),
+                None
             )
         else:
             member_data = next(
-            (row for row in records if keyword in row["姓名"]),
-            None
+                (row for row in records if keyword in row["姓名"]),
+                None
             )
 
         if member_data:
             # 會員驗證成功，開始預約流程
             states = ['start_booking', 'category_selection', 'service_selection', 'date_input', 'time_input', 'confirmation', 'completed', 'cancelled']
             transitions = [
-            {'trigger': 'start', 'source': 'start_booking', 'dest': 'category_selection', 'after': 'ask_category'},
-            {'trigger': 'select_category', 'source': 'category_selection', 'dest': 'service_selection', 'after': 'process_category'},
-            {'trigger': 'select_service', 'source': 'service_selection', 'dest': 'date_input', 'after': 'ask_date'},
-            {'trigger': 'enter_date', 'source': 'date_input', 'dest': 'time_input', 'after': 'ask_time'},
-            {'trigger': 'enter_time', 'source': 'time_input', 'dest': 'confirmation', 'after': 'process_time'},
-            {'trigger': 'confirm_booking', 'source': 'confirmation', 'dest': 'completed', 'after': 'process_booking'},
-            {'trigger': 'cancel_booking', 'source': '*', 'dest': 'cancelled', 'after': 'send_cancellation_message'},
-            {'trigger': 'restart_booking', 'source': '*', 'dest': 'start_booking', 'after': 'send_booking_start_message'}
+                {'trigger': 'start', 'source': 'start_booking', 'dest': 'category_selection', 'after': 'ask_category'},
+                {'trigger': 'select_category', 'source': 'category_selection', 'dest': 'service_selection', 'after': 'process_category'},
+                {'trigger': 'select_service', 'source': 'service_selection', 'dest': 'date_input', 'after': 'ask_date'},
+                {'trigger': 'enter_date', 'source': 'date_input', 'dest': 'time_input', 'after': 'ask_time'},
+                {'trigger': 'enter_time', 'source': 'time_input', 'dest': 'confirmation', 'after': 'process_time'},
+                {'trigger': 'confirm_booking', 'source': 'confirmation', 'dest': 'completed', 'after': 'process_booking'},
+                {'trigger': 'cancel_booking', 'source': '*', 'dest': 'cancelled', 'after': 'send_cancellation_message'},
+                {'trigger': 'restart_booking', 'source': '*', 'dest': 'start_booking', 'after': 'send_booking_start_message'}
             ]
             user_states[user_id] = BookingFSM(user_id, states=states, transitions=transitions, initial='start_booking')
             user_states[user_id].start(event) # 開始預約流程
             del user_states[user_id] # 移除會員驗證狀態，進入預約流程
         else:
             line_bot_api.reply_message(
-            event.reply_token,
-            TextSendMessage(text="❌ 查無此會員資料，請確認後再試一次。")
+                event.reply_token,
+                TextSendMessage(text="❌ 查無此會員資料，請確認後再試一次。")
             )
 
     except Exception as e:
@@ -1077,40 +1077,40 @@ def handle_message(event):
 
             if matched and matched.get("圖片1", "").startswith("https"):
                 bubble = {
-                "type": "bubble",
-                "hero": {
-                "type": "image",
-                "url": matched["圖片1"],
-                "size": "full",
-                "aspectRatio": "20:13",
-                "aspectMode": "cover"
-                },
-                "body": {
-                "type": "box",
-                "layout": "vertical",
-                "spacing": "sm",
-                "contents": [
-                {
-                "type": "text",
-                "text": matched["名稱"],
-                "weight": "bold",
-                "size": "xl",
-                "wrap": True
-                },
-                {
-                "type": "text",
-                "text": matched["描述"],
-                "size": "sm",
-                "wrap": True,
-                "color": "#666666"
-                }
-                ]
-                }
+                    "type": "bubble",
+                    "hero": {
+                        "type": "image",
+                        "url": matched["圖片1"],
+                        "size": "full",
+                        "aspectRatio": "20:13",
+                        "aspectMode": "cover"
+                    },
+                    "body": {
+                        "type": "box",
+                        "layout": "vertical",
+                        "spacing": "sm",
+                        "contents": [
+                            {
+                                "type": "text",
+                                "text": matched["名稱"],
+                                "weight": "bold",
+                                "size": "xl",
+                                "wrap": True
+                            },
+                            {
+                                "type": "text",
+                                "text": matched["描述"],
+                                "size": "sm",
+                                "wrap": True,
+                                "color": "#666666"
+                            }
+                        ]
+                    }
                 }
 
                 flex_msg = FlexSendMessage(
-                alt_text=f"{matched['名稱']} 詳細資訊",
-                contents=bubble
+                    alt_text=f"{matched['名稱']} 詳細資訊",
+                    contents=bubble
                 )
                 line_bot_api.reply_message(event.reply_token, flex_msg)
             else:
