@@ -1021,7 +1021,7 @@ def handle_message(event):
     else:
         line_bot_api.reply_message(event.reply_token, TextSendMessage(text="您已經在預約流程中，請繼續操作。"))
 
-elif user_states.get(user_id) == "awaiting_member_check_before_booking":
+  elif user_states.get(user_id) == "awaiting_member_check_before_booking":
     keyword = user_msg.strip()
     try:
         client = get_gspread_client()
