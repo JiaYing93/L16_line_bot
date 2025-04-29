@@ -537,6 +537,413 @@ def handle_message(event):
         except Exception as e:
             logger.error(f"{user_msg} 分類查詢錯誤：{e}", exc_info=True)
             line_bot_api.reply_message(event.reply_token, TextSendMessage(text="⚠ 發生錯誤，請稍後再試。"))
+    elif user_msg == "上課教室":
+        try:
+            client = get_gspread_client()
+            sheet = client.open_by_key("1jVhpPNfB6UrRaYZjCjyDR4GZApjYLL4KZXQ1Si63Zyg").worksheet("場地資料")
+            records = sheet.get_all_records()
+
+            matched = [
+                row for row in records
+                if row.get("類型", "").strip() == "上課教室" and row.get("圖片1", "").startswith("https")
+            ]
+
+            if not matched:
+                line_bot_api.reply_message(
+                    event.reply_token, TextSendMessage(text="⚠ 查無『上課教室』的場地資料")
+                )
+                return
+
+            image_columns = [
+                ImageCarouselColumn(
+                    image_url=row["圖片1"],
+                    action=MessageAction(label=row.get("名稱", "查看詳情"), text=row.get("名稱", "查看詳情"))
+                ) for row in matched
+            ]
+
+            carousel = TemplateSendMessage(
+                alt_text="上課教室場地列表",
+                template=ImageCarouselTemplate(columns=image_columns[:10])
+            )
+            line_bot_api.reply_message(event.reply_token, carousel)
+
+        except Exception as e:
+            logger.error(f"上課教室查詢失敗：{e}", exc_info=True)
+            line_bot_api.reply_message(event.reply_token, TextSendMessage(text=f"⚠ 發生錯誤：{e}"))
+            
+    elif user_msg == "健身教練":
+         try:
+             client = get_gspread_client()
+             sheet = client.open_by_key("1jVhpPNfB6UrRaYZjCjyDR4GZApjYLL4KZXQ1Si63Zyg").worksheet("教練資料")
+             records = sheet.get_all_records()
+ 
+             matched = [
+                 row for row in records
+                 if row.get("教練類型", "").strip() == "健身教練" and row.get("圖片", "").startswith("https")
+             ]
+ 
+             if not matched:
+                 line_bot_api.reply_message(
+                     event.reply_token, TextSendMessage(text="⚠ 查無『健身教練』的資料")
+                 )
+                 return
+ 
+             bubbles = []
+             for row in matched:
+                 bubble = {
+                     "type": "bubble",
+                     "hero": {
+                         "type": "image",
+                         "url": row["圖片"],
+                         "size": "full",
+                         "aspectRatio": "20:13",
+                         "aspectMode": "cover"
+                     },
+                     "body": {
+                         "type": "box",
+                         "layout": "vertical",
+                         "spacing": "sm",
+                         "contents": [
+                             {
+                                 "type": "text",
+                                 "text": f"{row['姓名']}（{row['教練類別']}）",
+                                 "weight": "bold",
+                                 "size": "lg",
+                                 "wrap": True
+                             },
+                             {
+                                 "type": "text",
+                                 "text": f"專長：{row.get('專長', '未提供')}",
+                                 "size": "sm",
+                                 "wrap": True,
+                                 "color": "#666666"
+                             }
+                         ]
+                     },
+                     "footer": {
+                         "type": "box",
+                         "layout": "vertical",
+                         "spacing": "sm",
+                         "contents": [
+                             {
+                                 "type": "button",
+                                 "style": "primary",
+                                 "action": {
+                                     "type": "message",
+                                     "label": "立即預約",
+                                     "text": f"我要預約 {row['姓名']}"
+                                 }
+                             }
+                         ]
+                     }
+                 }
+                 bubbles.append(bubble)
+ 
+             flex_message = FlexSendMessage(
+                 alt_text="健身教練清單",
+                 contents={
+                     "type": "carousel",
+                     "contents": bubbles[:10]
+                 }
+             )
+             line_bot_api.reply_message(event.reply_token, flex_message)
+ 
+         except Exception as e:
+             logger.error(f"健身教練查詢失敗：{e}", exc_info=True)
+             line_bot_api.reply_message(event.reply_token, TextSendMessage(text=f"⚠ 發生錯誤：{e}"))
+
+    elif user_msg == "課程教練":
+        # 顯示分類選單（按鈕）
+        subcategories = ["有氧教練", "瑜珈老師", "游泳教練"]
+        buttons = [
+            MessageAction(label=sub, text=sub)
+            for sub in subcategories[:4]  # 先顯示前4個
+        ]
+        # 第二個 bubble 可加更多分類
+        template = TemplateSendMessage(
+            alt_text="課程教練分類",
+            template=ButtonsTemplate(
+                title="課程教練分類",
+                text="請選擇課程教練",
+                actions=buttons
+            )
+        )
+        line_bot_api.reply_message(event.reply_token, template)
+        
+    elif user_msg in ["有氧教練", "瑜珈老師", "游泳教練"]:
+         try:
+             client = get_gspread_client()
+             sheet = client.open_by_key("1jVhpPNfB6UrRaYZjCjyDR4GZApjYLL4KZXQ1Si63Zyg").worksheet("教練資料")
+             records = sheet.get_all_records()
+ 
+             matched = [
+                 row for row in records
+                 if row.get("教練類別", "").strip() == user_msg and row.get("圖片", "").startswith("https")
+             ]
+ 
+             if not matched:
+                 line_bot_api.reply_message(
+                     event.reply_token, TextSendMessage(text="⚠ 查無『{user_msg}』的資料")
+                 )
+                 return
+ 
+             bubbles = []
+             for row in matched:
+                 bubble = {
+                     "type": "bubble",
+                     "hero": {
+                         "type": "image",
+                         "url": row["圖片"],
+                         "size": "full",
+                         "aspectRatio": "20:13",
+                         "aspectMode": "cover"
+                     },
+                     "body": {
+                         "type": "box",
+                         "layout": "vertical",
+                         "spacing": "sm",
+                         "contents": [
+                             {
+                                 "type": "text",
+                                 "text": f"{row['姓名']}（{row['教練類別']}）",
+                                 "weight": "bold",
+                                 "size": "lg",
+                                 "wrap": True
+                             },
+                             {
+                                 "type": "text",
+                                 "text": f"專長：{row.get('專長', '未提供')}",
+                                 "size": "sm",
+                                 "wrap": True,
+                                 "color": "#666666"
+                             }
+                         ]
+                     },
+                     "footer": {
+                         "type": "box",
+                         "layout": "vertical",
+                         "spacing": "sm",
+                         "contents": [
+                             {
+                                 "type": "button",
+                                 "style": "primary",
+                                 "action": {
+                                     "type": "message",
+                                     "label": "立即預約",
+                                     "text": f"我要預約 {row['姓名']}"
+                                 }
+                             }
+                         ]
+                     }
+                 }
+                 bubbles.append(bubble)
+ 
+             flex_message = FlexSendMessage(
+                 alt_text="課程教練清單",
+                 contents={
+                     "type": "carousel",
+                     "contents": bubbles[:10]
+                 }
+             )
+             line_bot_api.reply_message(event.reply_token, flex_message)
+ 
+         except Exception as e:
+             logger.error(f"課程教練查詢失敗：{e}", exc_info=True)
+             line_bot_api.reply_message(event.reply_token, TextSendMessage(text=f"⚠ 發生錯誤：{e}"))
+            
+    elif user_msg == "課程內容":
+        try:
+            client = get_gspread_client()
+            sheet = client.open_by_key("1jVhpPNfB6UrRaYZjCjyDR4GZApjYLL4KZXQ1Si63Zyg").worksheet("課程資料")
+            records = sheet.get_all_records()
+
+            # 提取唯一課程類型
+            course_types = list({row["課程類型"].strip() for row in records if row.get("課程類型")})
+            course_types = [t for t in course_types if t]
+
+            # 建立按鈕
+            buttons = [
+                {
+                    "type": "button",
+                    "style": "secondary",
+                    "action": {
+                        "type": "message",
+                        "label": t,
+                        "text": t
+                    }
+                } for t in course_types[:6]
+            ]
+
+            bubble = {
+                "type": "bubble",
+                "body": {
+                    "type": "box",
+                    "layout": "vertical",
+                    "contents": [
+                        {
+                            "type": "text",
+                            "text": "📚 課程內容查詢",
+                            "weight": "bold",
+                            "size": "lg",
+                            "margin": "md"
+                        },
+                        {
+                            "type": "box",
+                            "layout": "vertical",
+                            "spacing": "sm",
+                            "margin": "lg",
+                            "contents": buttons
+                        }
+                    ]
+                }
+            }
+
+            flex_msg = FlexSendMessage(
+                alt_text="課程類型查詢",
+                contents=bubble
+            )
+
+            line_bot_api.reply_message(
+                event.reply_token,
+                [
+                    flex_msg,
+                    TextSendMessage(text="📅 你也可以輸入日期（例如：2025-05-01）查詢當天開課課程。")
+                ]
+            )
+
+        except Exception as e:
+            logger.error(f"課程內容查詢錯誤：{e}", exc_info=True)
+            line_bot_api.reply_message(event.reply_token, TextSendMessage(text="⚠ 無法讀取課程資料"))
+
+    elif user_msg in ["有氧課程", "瑜珈課程", "游泳課程"]:
+        try:
+            client = get_gspread_client()
+            sheet = client.open_by_key("1jVhpPNfB6UrRaYZjCjyDR4GZApjYLL4KZXQ1Si63Zyg").worksheet("課程資料")
+            records = sheet.get_all_records()
+
+            matched = [row for row in records if row.get("課程類型", "").strip() == user_msg]
+
+            if not matched:
+                line_bot_api.reply_message(event.reply_token, TextSendMessage(text=f"❌ 查無『{user_msg}』相關課程"))
+                return
+
+            bubbles = []
+            for row in matched[:10]:
+                bubbles.append({
+                    "type": "bubble",
+                    "body": {
+                        "type": "box",
+                        "layout": "vertical",
+                        "spacing": "sm",
+                        "contents": [
+                            {"type": "text", "text": row.get("課程名稱", "（未提供課程名稱）"), "weight": "bold", "size": "lg", "wrap": True},
+                            {"type": "text", "text": f"👨‍🏫 教練：{row.get('教練姓名', '未知')}", "size": "sm", "wrap": True},
+                            {"type": "text", "text": f"📅 開課日期：{row.get('開始日期', '未提供')}", "size": "sm"},
+                            {"type": "text", "text": f"🕒 上課時間：{row.get('上課時間', '未提供')}", "size": "sm"},
+                            {"type": "text", "text": f"⏱️ 時間：{row.get('時間', '未提供')}", "size": "sm"},
+                            {"type": "text", "text": f"💲 價格：{row.get('課程價格', '未定')}", "size": "sm"}
+                        ]
+                    }
+                })
+
+            line_bot_api.reply_message(
+                event.reply_token,
+                FlexSendMessage(
+                    alt_text=f"{user_msg} 課程內容",
+                    contents={"type": "carousel", "contents": bubbles}
+                )
+            )
+
+        except Exception as e:
+            logger.error(f"課程類型查詢錯誤：{e}", exc_info=True)
+            line_bot_api.reply_message(
+                event.reply_token,
+                TextSendMessage(text=f"⚠ 無法查詢課程內容（錯誤：{str(e)}）")
+            )
+
+    elif re.match(r"^\d{4}[-/]\d{2}[-/]\d{2}$", user_msg):
+        query_date = user_msg.replace("/", "-").strip()
+        try:
+            client = get_gspread_client()
+            sheet = client.open_by_key("1jVhpPNfB6UrRaYZjCjyDR4GZApjYLL4KZXQ1Si63Zyg").worksheet("課程資料")
+            records = sheet.get_all_records()
+
+            matched = [row for row in records if row.get("開始日期", "").strip() == query_date]
+
+            if not matched:
+                line_bot_api.reply_message(event.reply_token, TextSendMessage(text="❌ 該日期無任何課程"))
+                return
+
+            bubbles = []
+            for row in matched[:10]:
+                bubbles.append({
+                    "type": "bubble",
+                    "body": {
+                        "type": "box",
+                        "layout": "vertical",
+                        "spacing": "sm",
+                        "contents": [
+                            {"type": "text", "text": row.get("課程名稱", "（未提供課程名稱）"), "weight": "bold", "size": "lg", "wrap": True},
+                            {"type": "text", "text": f"👨‍🏫 教練：{row.get('教練姓名', '未知')}", "size": "sm", "wrap": True},
+                            {"type": "text", "text": f"📅 開課日期：{row.get('開始日期', '未提供')}", "size": "sm"},
+                            {"type": "text", "text": f"🕒 上課時間：{row.get('上課時間', '未提供')}", "size": "sm"},
+                            {"type": "text", "text": f"⏱️ 時間：{row.get('時間', '未提供')}", "size": "sm"},
+                            {"type": "text", "text": f"💲 價格：{row.get('課程價格', '未定')}", "size": "sm"}
+                        ]
+                    }
+                })
+
+            line_bot_api.reply_message(
+                event.reply_token,
+                FlexSendMessage(
+                    alt_text=f"{query_date} 的課程",
+                    contents={"type": "carousel", "contents": bubbles}
+                )
+            )
+
+        except Exception as e:
+            logger.error(f"課程日期查詢錯誤：{e}", exc_info=True)
+            line_bot_api.reply_message(
+                event.reply_token,
+                TextSendMessage(text=f"⚠ 無法查詢課程內容（錯誤訊息：{str(e)}）")
+            )
+
+    elif user_msg == "健身紀錄":
+        liff_url = "https://liffweb.vercel.app/"  # 這是新專案上線的網址
+        flex_message = FlexSendMessage(
+            alt_text="健身紀錄",
+            contents={
+                "type": "bubble",
+                "hero": {
+                    "type": "image",
+                    "url": "https://example.com/your_new_image.jpg",  # 替換成您的新圖片網址
+                    "size": "full",
+                    "aspectRatio": "20:13",
+                    "aspectMode": "cover",
+                    "action": {
+                        "type": "uri",
+                        "uri": liff_url
+                    }
+                },
+                "body": {
+                    "type": "box",
+                    "layout": "vertical",
+                    "contents": [
+                        {
+                            "type": "button",
+                            "style": "primary",
+                            "height": "md",
+                            "action": {
+                                "type": "uri",
+                                "label": "開始記錄今日健身！",
+                                "uri": liff_url
+                            }
+                        }
+                    ]
+                }
+            }
+        )
+        line_bot_api.reply_message(event.reply_token, flex_message)
     elif user_msg == "我要預約":
         if user_id not in user_states or not isinstance(user_states[user_id], BookingFSM):
             # 先檢查是否已經在等待會員資訊
