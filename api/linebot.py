@@ -24,7 +24,7 @@ logger = logging.getLogger(__name__)
 line_bot_api = LineBotApi(os.getenv("LINE_CHANNEL_ACCESS_TOKEN"))
 line_handler = WebhookHandler(os.getenv("LINE_CHANNEL_SECRET"))
 SPREADSHEET_KEY = os.getenv("GOOGLE_SPREADSHEET_KEY")
-BOOKING_OPTIONS_SHEET_NAME = "預約選項" # 試算表中的工作表名稱
+BOOKING_OPTIONS_SHEET_NAME = "會員資料" # 試算表中的工作表名稱
 user_states = {}
 # 預約狀態機模型
 class BookingFSM(GraphMachine):
