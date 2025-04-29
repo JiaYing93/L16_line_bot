@@ -1022,11 +1022,11 @@ def handle_message(event):
         line_bot_api.reply_message(event.reply_token, TextSendMessage(text="您已經在預約流程中，請繼續操作。"))
 
     elif user_states.get(user_id) == "awaiting_member_check_before_booking":
-    keyword = user_msg.strip()
-    try:
-        client = get_gspread_client()
-        sheet = client.open_by_key("1jVhpPNfB6UrRaYZjCjyDR4GZApjYLL4KZXQ1Si63Zyg").worksheet("會員資料")
-        records = sheet.get_all_records()
+         keyword = user_msg.strip()
+         try:
+             client = get_gspread_client()
+             sheet = client.open_by_key("1jVhpPNfB6UrRaYZjCjyDR4GZApjYLL4KZXQ1Si63Zyg").worksheet("會員資料")
+             records = sheet.get_all_records()
 
         # 判斷輸入是編號還是姓名
         member_data = None
