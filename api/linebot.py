@@ -115,17 +115,35 @@ class BookingFSM(GraphMachine):
         if event.message.text.lower() == "確認":
             try:
                 client = get_gspread_client()
-                sheet = client.open_by_key(SPREADSHEET_KEY).worksheet("預約紀錄") # 替換為你的工作表名稱
-                booking_data = [self.user_id, self.booking_category, self.booking_service, self.booking_date, self.booking_time]
-                sheet.append_row(booking_data)
-                line_bot_api.push_message(self.user_id, TextSendMessage(text="✅ 您的預約已成功記錄！"))
+                spreadsheet_key = SPREADSHEET_KEY # 您的主要試算表 Key (假設所有資料在同一個試算表的不同工作表)
+
+                # 定義類別與試算表工作表名稱的對應關係
+                category_to_sheet = {
+                    "團體課程": "課程資料",
+                    "私人教練": "教練資料",
+                    "場地租借": "場地資料"
+                }
+
+                worksheet_name = category_to_sheet.get(self.booking_category)
+
+                if worksheet_name:
+                    sheet = client.open_by_key(spreadsheet_key).worksheet(worksheet_name)
+                    booking_data = [self.user_id, self.booking_category, self.booking_service, self.booking_date, self.booking_time]
+                    sheet.append_row(booking_data)
+                    line_bot_api.push_message(self.user_id, TextSendMessage(text=f"✅ 您的 {self.booking_category} 預約已成功記錄！"))
+                else:
+                    line_bot_api.push_message(self.user_id, TextSendMessage(text="⚠ 無法確定要將此預約記錄到哪個工作表。"))
+                    logger.error(f"未知的預約類別：{self.booking_category}")
+
             except Exception as e:
                 logger.error(f"儲存預約資料到 Google Sheets 失敗：{e}", exc_info=True)
                 line_bot_api.push_message(self.user_id, TextSendMessage(text="⚠ 儲存預約資料時發生錯誤，請稍後再試。"))
+
             if self.user_id in user_states:
                 del user_states[self.user_id]
             self.reset_booking_data() # 預約完成後重置資料
             self.go_back(2) # 回到初始狀態 (start_booking)
+
         elif event.message.text.lower() == "取消":
             self.trigger("cancel_booking", event)
         else:
