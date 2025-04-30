@@ -1121,10 +1121,15 @@ def handle_message(event):
             records = sheet.get_all_records()
     
             # 判斷輸入是編號還是姓名
-            if re.match(r"^[A-Z]\d{5}$", keyword.upper()):  # 判斷是 A00001 類型
+            if re.match(r"^[A-Z]\d{5}$", keyword.upper()):  # 如果是編號
                 member_data = next(
-                    (row for row in records if str(row["會員編號"]).strip().upper() == keyword.upper()),
-                    None
+                (row for row in records if str(row["會員編號"]).strip().upper() == keyword.upper()),
+                None
+                    )
+            else:  # 如果是姓名
+                member_data = next(
+                (row for row in records if keyword in row["姓名"]),
+                None
                 )
             if member_data:
                 # 會員驗證成功，開始預約流程
