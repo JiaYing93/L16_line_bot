@@ -1111,26 +1111,26 @@ def handle_message(event):
             line_bot_api.reply_message(event.reply_token, TextSendMessage(text="您已經在預約流程中，請繼續操作。"))
 
     # 注意：這裡的 elif 和 上面的 elif 對齊，表示這是另一個條件分支
-    elif user_states.get(user_id) == "awaiting_member_info":
+    elif user_states.get(user_id) == "awaiting_member_check_before_booking":
         user_states.pop(user_id)
         keyword = user_msg.strip()
-    
-        try:
-            client = get_gspread_client()
-            sheet = client.open_by_key("1jVhpPNfB6UrRaYZjCjyDR4GZApjYLL4KZXQ1Si63Zyg").worksheet("會員資料")
-            records = sheet.get_all_records()
-    
-            # 判斷輸入是編號還是姓名
-            if re.match(r"^[A-Z]\d{5}$", keyword.upper()):  # 如果是編號
-                member_data = next(
+
+    try:
+        client = get_gspread_client()
+        sheet = client.open_by_key("1jVhpPNfB6UrRaYZjCjyDR4GZApjYLL4KZXQ1Si63Zyg").worksheet("會員資料")
+        records = sheet.get_all_records()
+
+        # 判斷輸入是會員編號或姓名
+        if re.match(r"^[A-Z]\d{5}$", keyword.upper()):
+            member_data = next(
                 (row for row in records if str(row["會員編號"]).strip().upper() == keyword.upper()),
                 None
-                    )
-            else:  # 如果是姓名
-                member_data = next(
+            )
+        else:
+            member_data = next(
                 (row for row in records if keyword in row["姓名"]),
                 None
-                )
+            )
             if member_data:
                 # 會員驗證成功，開始預約流程
                 states = ['start_booking', 'category_selection', 'service_selection', 'date_input', 'time_input', 'confirmation', 'completed', 'cancelled']
