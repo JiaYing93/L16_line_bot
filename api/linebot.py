@@ -1111,18 +1111,24 @@ def handle_message(event):
             line_bot_api.reply_message(event.reply_token, TextSendMessage(text="您已經在預約流程中，請繼續操作。"))
 
     # 注意：這裡的 elif 和 上面的 elif 對齊，表示這是另一個條件分支
-    elif user_states.get(user_id) == "awaiting_member_check_before_booking":
+    elif user_states.get(user_id) == "awaiting_member_info":
+        user_states.pop(user_id)
         keyword = user_msg.strip()
+    
         try:
             client = get_gspread_client()
             sheet = client.open_by_key("1jVhpPNfB6UrRaYZjCjyDR4GZApjYLL4KZXQ1Si63Zyg").worksheet("會員資料")
             records = sheet.get_all_records()
-
+    
             # 判斷輸入是編號還是姓名
-            member_data = None
             if re.match(r"^[A-Z]\d{5}$", keyword.upper()):  # 判斷是 A00001 類型
                 member_data = next(
                     (row for row in records if str(row["會員編號"]).strip().upper() == keyword.upper()),
+                    None
+                )
+            else:
+                member_data = next(
+                    (row for row in records if keyword in row["姓名"]),
                     None
                 )
             else:
