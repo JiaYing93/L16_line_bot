@@ -1209,7 +1209,7 @@ def handle_message(event):
         except Exception as e:
             logger.error(f"場地詳情查詢失敗：{e}", exc_info=True)
             line_bot_api.reply_message(event.reply_token, TextSendMessage(text=f"⚠ 發生錯誤：{e}"))
-
+load_booking_options()  # 載入預約資料選項
 if __name__ == "__main__":
-    load_booking_options()  # 載入預約資料選項
+    
     app.run()
