@@ -1112,8 +1112,8 @@ def handle_message(event):
 
     # 注意：這裡的 elif 和 上面的 elif 對齊，表示這是另一個條件分支
     elif user_states.get(user_id) == "awaiting_member_check_before_booking":
-        user_states.pop(user_id)
-        keyword = user_msg.strip()
+         user_states.pop(user_id)
+         keyword = user_msg.strip()
 
     try:
         client = get_gspread_client()
@@ -1122,16 +1122,16 @@ def handle_message(event):
 
         # 判斷輸入是會員編號或姓名
         if re.match(r"^[A-Z]\d{5}$", keyword.upper()):
-            member_data = next(
+           member_data = next(
                 (row for row in records if str(row["會員編號"]).strip().upper() == keyword.upper()),
                 None
             )
         else:
-            member_data = next(
+             member_data = next(
                 (row for row in records if keyword in row["姓名"]),
                 None
-            )
-            if member_data:
+              )
+        if member_data:
                 # 會員驗證成功，開始預約流程
                 states = ['start_booking', 'category_selection', 'service_selection', 'date_input', 'time_input', 'confirmation', 'completed', 'cancelled']
                 transitions = [
@@ -1147,7 +1147,7 @@ def handle_message(event):
                 user_states[user_id] = BookingFSM(user_id, states=states, transitions=transitions, initial='start_booking')
                 user_states[user_id].start(event)
                 del user_states[user_id] # 移除會員驗證狀態，進入預約流程
-            else:
+        else:
                 line_bot_api.reply_message(
                     event.reply_token,
                     TextSendMessage(text="❌ 查無此會員資料，請確認後再試一次。")
