@@ -1131,11 +1131,6 @@ def handle_message(event):
                     (row for row in records if keyword in row["姓名"]),
                     None
                 )
-            else:
-                member_data = next(
-                    (row for row in records if keyword in row["姓名"]),
-                    None
-                )
 
             if member_data:
                 # 會員驗證成功，開始預約流程
