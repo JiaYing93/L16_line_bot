@@ -1211,4 +1211,5 @@ def handle_message(event):
             line_bot_api.reply_message(event.reply_token, TextSendMessage(text=f"⚠ 發生錯誤：{e}"))
 
 if __name__ == "__main__":
+    load_booking_options()  # 載入預約資料選項
     app.run()
