@@ -1126,12 +1126,6 @@ def handle_message(event):
                     (row for row in records if str(row["會員編號"]).strip().upper() == keyword.upper()),
                     None
                 )
-            else:
-                member_data = next(
-                    (row for row in records if keyword in row["姓名"]),
-                    None
-                )
-
             if member_data:
                 # 會員驗證成功，開始預約流程
                 states = ['start_booking', 'category_selection', 'service_selection', 'date_input', 'time_input', 'confirmation', 'completed', 'cancelled']
