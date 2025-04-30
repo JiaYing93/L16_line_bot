@@ -1154,9 +1154,9 @@ def handle_message(event):
                 )
 
         except Exception as e:
-            reply_text = f"❌ 會員驗證失敗：{str(e)}"
-            logger.error(f"會員驗證錯誤：{e}", exc_info=True)
-            line_bot_api.reply_message(event.reply_token, TextSendMessage(text=reply_text))
+               reply_text = f"❌ 會員驗證失敗：{str(e)}"
+               logger.error(f"會員驗證錯誤：{e}", exc_info=True)
+               line_bot_api.reply_message(event.reply_token, TextSendMessage(text=reply_text))
     else:
         try:
             client = get_gspread_client()
