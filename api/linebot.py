@@ -1153,12 +1153,12 @@ elif user_msg == "我要預約":
 
 # 注意：這裡的 elif 和 上面的 elif 對齊，表示這是另一個條件分支
 elif user_states.get(user_id) == "awaiting_member_check_before_booking":
-    user_states.pop(user_id)
-    keyword = user_msg.strip()  # keyword 現在儲存的是會員名字
-    logger.info(f"User {user_id}: keyword (name) set to '{keyword}'")
+     user_states.pop(user_id)
+     keyword = user_msg.strip()  # keyword 現在儲存的是會員名字
+     logger.info(f"User {user_id}: keyword (name) set to '{keyword}'")
 else:
-    keyword = ""  # 或者 keyword = None，根據你的後續程式碼邏輯選擇
-    logger.warning(f"User {user_id}: awaiting_member_check_before_booking condition not met, keyword set to '{keyword}'")
+     keyword = ""  # 或者 keyword = None，根據你的後續程式碼邏輯選擇
+     logger.warning(f"User {user_id}: awaiting_member_check_before_booking condition not met, keyword set to '{keyword}'")
 
 logger.info(f"User {user_id}: user_states value is '{user_states.get(user_id)}', keyword is '{keyword}' before try block")
 
