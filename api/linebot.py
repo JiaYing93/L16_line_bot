@@ -99,8 +99,8 @@ class BookingFSM(GraphMachine):
         categories = list(booking_options["categories"].keys())
         logger.info(f"ask_category 函數被呼叫，目前 booking_options: {booking_options}")  # 新增日誌
         if not categories:
-        line_bot_api.reply_message(event.reply_token, TextSendMessage(text="目前沒有可預約的類別，請稍後再試。"))
-        self.go_back()
+                line_bot_api.reply_message(event.reply_token, TextSendMessage(text="目前沒有可預約的類別，請稍後再試。"))
+                self.go_back()
         return
 
     buttons = [MessageAction(label=cat, text=cat) for cat in categories]
