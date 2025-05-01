@@ -27,7 +27,14 @@ line_bot_api = LineBotApi(os.getenv("LINE_CHANNEL_ACCESS_TOKEN"))
 line_handler = WebhookHandler(os.getenv("LINE_CHANNEL_SECRET"))
 SPREADSHEET_KEY = os.getenv("GOOGLE_SPREADSHEET_KEY")
 
-# 定義預約選項的工作表名稱
+user_states[user_id] = BookingFSM(
+    user_id,
+    states=states,
+    transitions=transitions,
+    initial='start_booking'
+)
+user_states[user_id].member_name = member_data['姓名']  # ✅ 儲存會員姓名
+user_states[user_id].start(event)
 BOOKING_OPTIONS_SHEETS = {
     '團體課程': '課程資料',
     '私人教練': '教練資料',
@@ -42,13 +49,12 @@ user_states = {}
 
 
 def load_booking_options():
-    """從 Google Sheets 載入預約選項 (從三個工作表)"""
     global booking_options
-    booking_options = {"categories": {}}  # 初始化資料結構
+    booking_options = {"categories": {}}
     try:
         client = get_gspread_client()
         for category, sheet_name in BOOKING_OPTIONS_SHEETS.items():
-            logger.info(f"嘗試載入 {category} 的預約選項，工作表名稱：{sheet_name}")  # 新增日誌
+            logger.info(f"嘗試載入 {category} 的預約選項，工作表名稱：{sheet_name}")
             try:
                 sheet = client.open_by_key(SPREADSHEET_KEY).worksheet(sheet_name)
                 records = sheet.get_all_records()
@@ -57,52 +63,33 @@ def load_booking_options():
                     item = row.get("項目")
                     if item:
                         booking_options["categories"][category].append(item)
-                logger.info(f"{category} 載入成功，找到 {len(records)} 筆記錄")  # 新增日誌
+                logger.info(f"{category} 載入成功，找到 {len(records)} 筆記錄")
             except gspread.exceptions.WorksheetNotFound:
                 logger.error(f"找不到工作表：{sheet_name}，跳過 {category}", exc_info=True)
             except Exception as e:
                 logger.error(f"載入 {category} 失敗：{e}", exc_info=True)
     except Exception as e:
         logger.error(f"載入預約選項失敗：{e}", exc_info=True)
-        booking_options = {"categories": {}}  # 預設為空
-    logger.info(f"預約選項載入結果：{booking_options}")  # 總結載入結果
+        booking_options = {"categories": {}}
+    logger.info(f"預約選項載入結果：{booking_options}")
 
 
-def process_booking(event, booking_category, booking_service, booking_date, booking_time, user_id):
-    """處理預約，將預約紀錄寫入對應的預約選項工作表"""
+def process_booking(event, booking_category, booking_service, booking_date, booking_time, user_id, member_name):
     try:
         client = get_gspread_client()
-        sheet_name = BOOKING_OPTIONS_SHEETS.get(booking_category)
-        if sheet_name:
-            sheet = client.open_by_key(SPREADSHEET_KEY).worksheet(sheet_name)
-            # 假設你的預約選項工作表有這些欄位來儲存預約紀錄
-            booking_data = [user_id, booking_service, booking_date, booking_time]
-            sheet.append_row(booking_data)
-            line_bot_api.push_message(user_id, TextSendMessage(text=f"✅ 您的 {booking_category} - {booking_service} 預約已成功記錄！"))
-        else:
-            line_bot_api.push_message(user_id, TextSendMessage(text="⚠ 無法確定要將此預約記錄到哪個工作表。"))
-            logger.error(f"未知的預約類別：{booking_category}")
+        sheet = client.open_by_key(SPREADSHEET_KEY).worksheet("預約總表")
+        booking_data = [user_id, member_name, booking_category, booking_service, booking_date, booking_time]
+        sheet.append_row(booking_data)
+        line_bot_api.push_message(user_id, TextSendMessage(text=f"✅ 您的 {booking_category} - {booking_service} 預約已成功記錄！"))
     except Exception as e:
         logger.error(f"儲存預約資料到 Google Sheets 失敗：{e}", exc_info=True)
-        line_bot_api.push_message(user_id, TextSendMessage(text="⚠ 儲存預約資料時發生錯誤，請稍後再試。"))
-
-
-class BookingFSM(GraphMachine):
-    def __init__(self, user_id, **machine_configs):
-        self.user_id = user_id
-        super().__init__(**machine_configs)
-        self.reset_booking_data()
-
-    def reset_booking_data(self):
-        self.booking_category = None
-        self.booking_service = None
-        self.booking_date = None
-        self.booking_time = None
+        line_bot_api.push_message(user_id, TextSendMessage(text="⚠ 儲存預約資料時發生錯誤，請稍後再試。")
 
 class BookingFSM(GraphMachine):
-    def __init__(self, user_id, **machine_configs):
+    def __init__(self, user_id, **configs):
         self.user_id = user_id
-        super().__init__(**machine_configs)
+        self.member_name = ""
+        super().__init__(**configs)
         self.reset_booking_data()
 
     def reset_booking_data(self):
@@ -1136,7 +1123,7 @@ def handle_message(event):
         line_bot_api.reply_message(event.reply_token, flex_message)
     elif user_msg == "我要預約":  # 將 elif 向左移，與 if 對齊
         if user_id not in user_states or not isinstance(user_states[user_id], BookingFSM):
-            # 先檢查是否已經在等待會員資訊
+        # 先檢查是否已經在等待會員資訊
             if user_states.get(user_id) == "awaiting_member_check_before_booking":
                 line_bot_api.reply_message(
                     event.reply_token,
@@ -1151,13 +1138,13 @@ def handle_message(event):
         else:
             line_bot_api.reply_message(event.reply_token, TextSendMessage(text="您已經在預約流程中，請繼續操作。"))
 
-    # 注意：這裡的 elif 和 上面的 elif 對齊，表示這是另一個條件分支
+# 注意：這裡的 elif 和 上面的 elif 對齊，表示這是另一個條件分支
     elif user_states.get(user_id) == "awaiting_member_check_before_booking":  # 將 elif 向左移，與 if 對齊
         user_states.pop(user_id)
         keyword = user_msg.strip()  # keyword 現在儲存的是會員名字
         logger.info(f"User {user_id}: keyword (name) set to '{keyword}'")
 
-logger.info(f"User {user_id}: user_states value is '{user_states.get(user_id)}', keyword is '{keyword}' before try block")
+    logger.info(f"User {user_id}: user_states value is '{user_states.get(user_id)}', keyword is '{keyword}' before try block")
 
     try:
         client = get_gspread_client()
@@ -1171,7 +1158,7 @@ logger.info(f"User {user_id}: user_states value is '{user_states.get(user_id)}',
         )
 
         if member_data:
-        # 會員驗證成功，開始預約流程
+    # 會員驗證成功，開始預約流程
             states = ['start_booking', 'category_selection', 'service_selection', 'date_input', 'time_input', 'confirmation', 'completed', 'cancelled']
             transitions = [
                 {'trigger': 'start', 'source': 'start_booking', 'dest': 'category_selection', 'after': 'ask_category'},
