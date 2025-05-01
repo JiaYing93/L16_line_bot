@@ -94,6 +94,18 @@ class BookingFSM(GraphMachine):
         self.booking_date = None
         self.booking_time = None
 
+    class BookingFSM(GraphMachine):
+    def __init__(self, user_id, **machine_configs):
+        self.user_id = user_id
+        super().__init__(**machine_configs)
+        self.reset_booking_data()
+
+    def reset_booking_data(self):
+        self.booking_category = None
+        self.booking_service = None
+        self.booking_date = None
+        self.booking_time = None
+
     def ask_category(self, event):
         global booking_options
         categories = list(booking_options["categories"].keys())
@@ -123,6 +135,23 @@ class BookingFSM(GraphMachine):
             )
         )
     line_bot_api.reply_message(event.reply_token, template)
+
+    def process_category(self, event):
+        self.booking_category = event.message.text
+        if self.booking_category in booking_options["categories"]:
+            services = booking_options["categories"][self.booking_category]
+            if services:
+                buttons = [MessageAction(label=service, text=service) for service in services]
+                template = TemplateSendMessage(
+                    alt_text="請選擇預約項目",
+                    template=ButtonsTemplate(
+                        title=f"{self.booking_category} 預約",
+                        text="您想預約哪個項目？",
+                        actions=buttons
+                    )
+                )
+                line_bot_api.reply_message(event.reply_token, template)
+                self.next_state()
 
     def process_category(self, event):
         self.booking_category = event.message.text
