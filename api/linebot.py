@@ -28,12 +28,11 @@ line_handler = WebhookHandler(os.getenv("LINE_CHANNEL_SECRET"))
 SPREADSHEET_KEY = os.getenv("GOOGLE_SPREADSHEET_KEY")
 
 # 定義預約選項的工作表名稱
-BOOKING_OPTIONS_SHEETS = {
-    "團體課程": "團體課程選項",
-    "私人教練": "私人教練選項",
-    "場地租借": "場地租借選項"
+BOOKING_COLUMN_MAPPING = {
+    '團體課程': '課程名稱',
+    '私人教練': '教練姓名',
+    '場地租借': '場地名稱'
 }
-
 user_states = {}
 
 
