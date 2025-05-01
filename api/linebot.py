@@ -1134,31 +1134,31 @@ def handle_message(event):
             }
         )
         line_bot_api.reply_message(event.reply_token, flex_message)
-elif user_msg == "我要預約":
-    if user_id not in user_states or not isinstance(user_states[user_id], BookingFSM):
-        # 先檢查是否已經在等待會員資訊
-        if user_states.get(user_id) == "awaiting_member_check_before_booking":
-            line_bot_api.reply_message(
-                event.reply_token,
-                TextSendMessage(text="請先輸入您的姓名以進行驗證。")  # 修改提示訊息
-            )
+elif user_msg == "我要預約":  # 將 elif 向左移，與 if 對齊
+        if user_id not in user_states or not isinstance(user_states[user_id], BookingFSM):
+            # 先檢查是否已經在等待會員資訊
+            if user_states.get(user_id) == "awaiting_member_check_before_booking":
+                line_bot_api.reply_message(
+                    event.reply_token,
+                    TextSendMessage(text="請先輸入您的姓名以進行驗證。")  # 修改提示訊息
+                )
+            else:
+                user_states[user_id] = "awaiting_member_check_before_booking"
+                line_bot_api.reply_message(
+                    event.reply_token,
+                    TextSendMessage(text="您好，請先輸入您的姓名以進行預約。")  # 修改提示訊息
+                )
         else:
-            user_states[user_id] = "awaiting_member_check_before_booking"
-            line_bot_api.reply_message(
-                event.reply_token,
-                TextSendMessage(text="您好，請先輸入您的姓名以進行預約。")  # 修改提示訊息
-            )
-    else:
-        line_bot_api.reply_message(event.reply_token, TextSendMessage(text="您已經在預約流程中，請繼續操作。"))
+            line_bot_api.reply_message(event.reply_token, TextSendMessage(text="您已經在預約流程中，請繼續操作。"))
 
-# 注意：這裡的 elif 和 上面的 elif 對齊，表示這是另一個條件分支
-elif user_states.get(user_id) == "awaiting_member_check_before_booking":
-     user_states.pop(user_id)
-     keyword = user_msg.strip()  # keyword 現在儲存的是會員名字
-     logger.info(f"User {user_id}: keyword (name) set to '{keyword}'")
-else:
-     keyword = ""  # 或者 keyword = None，根據你的後續程式碼邏輯選擇
-     logger.warning(f"User {user_id}: awaiting_member_check_before_booking condition not met, keyword set to '{keyword}'")
+    # 注意：這裡的 elif 和 上面的 elif 對齊，表示這是另一個條件分支
+    elif user_states.get(user_id) == "awaiting_member_check_before_booking":  # 將 elif 向左移，與 if 對齊
+        user_states.pop(user_id)
+        keyword = user_msg.strip()  # keyword 現在儲存的是會員名字
+        logger.info(f"User {user_id}: keyword (name) set to '{keyword}'")
+    else:
+        keyword = ""  # 或者 keyword = None，根據你的後續程式碼邏輯選擇
+        logger.warning(f"User {user_id}: awaiting_member_check_before_booking condition not met, keyword set to '{keyword}' before try block")
 
 logger.info(f"User {user_id}: user_states value is '{user_states.get(user_id)}', keyword is '{keyword}' before try block")
 
