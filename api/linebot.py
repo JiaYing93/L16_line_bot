@@ -94,7 +94,7 @@ class BookingFSM(GraphMachine):
         self.booking_date = None
         self.booking_time = None
 
-    class BookingFSM(GraphMachine):
+class BookingFSM(GraphMachine):
     def __init__(self, user_id, **machine_configs):
         self.user_id = user_id
         super().__init__(**machine_configs)
