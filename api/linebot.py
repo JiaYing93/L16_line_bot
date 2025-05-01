@@ -1159,43 +1159,43 @@ def handle_message(event):
 
 logger.info(f"User {user_id}: user_states value is '{user_states.get(user_id)}', keyword is '{keyword}' before try block")
 
-try:
-    client = get_gspread_client()
-    sheet = client.open_by_key("1jVhpPNfB6UrRaYZjCjyDR4GZApjYLL4KZXQ1Si63Zyg").worksheet("會員資料")
-    records = sheet.get_all_records()
+    try:
+        client = get_gspread_client()
+        sheet = client.open_by_key("1jVhpPNfB6UrRaYZjCjyDR4GZApjYLL4KZXQ1Si63Zyg").worksheet("會員資料")
+        records = sheet.get_all_records()
 
     # 直接使用姓名進行比對 (簡化了判斷邏輯)
-    member_data = next(
-        (row for row in records if keyword in row["姓名"]),
-        None
-    )
-
-    if member_data:
-        # 會員驗證成功，開始預約流程
-        states = ['start_booking', 'category_selection', 'service_selection', 'date_input', 'time_input', 'confirmation', 'completed', 'cancelled']
-        transitions = [
-            {'trigger': 'start', 'source': 'start_booking', 'dest': 'category_selection', 'after': 'ask_category'},
-            {'trigger': 'select_category', 'source': 'category_selection', 'dest': 'service_selection', 'after': 'process_category'},
-            {'trigger': 'select_service', 'source': 'service_selection', 'dest': 'date_input', 'after': 'ask_date'},
-            {'trigger': 'enter_date', 'source': 'date_input', 'dest': 'time_input', 'after': 'ask_time'},
-            {'trigger': 'enter_time', 'source': 'time_input', 'dest': 'confirmation', 'after': 'process_time'},
-            {'trigger': 'confirm_booking', 'source': 'confirmation', 'dest': 'completed', 'after': 'process_booking'},
-            {'trigger': 'cancel_booking', 'source': '*', 'dest': 'cancelled', 'after': 'send_cancellation_message'},
-            {'trigger': 'restart_booking', 'source': '*', 'dest': 'start_booking', 'after': 'send_booking_start_message'}
-        ]
-        user_states[user_id] = BookingFSM(user_id, states=states, transitions=transitions, initial='start_booking')
-        user_states[user_id].start(event)
-        del user_states[user_id]  # 移除會員驗證狀態，進入預約流程
-    else:
-        line_bot_api.reply_message(
-            event.reply_token,
-            TextSendMessage(text="❌ 查無此會員資料，請確認後再試一次。")
+        member_data = next(
+            (row for row in records if keyword in row["姓名"]),
+            None
         )
 
-except Exception as e:
-    reply_text = f"❌ 會員驗證失敗：{str(e)}"
-    logger.error(f"會員驗證錯誤：{e}", exc_info=True)
-    line_bot_api.reply_message(event.reply_token, TextSendMessage(text=reply_text))
+        if member_data:
+        # 會員驗證成功，開始預約流程
+            states = ['start_booking', 'category_selection', 'service_selection', 'date_input', 'time_input', 'confirmation', 'completed', 'cancelled']
+            transitions = [
+                {'trigger': 'start', 'source': 'start_booking', 'dest': 'category_selection', 'after': 'ask_category'},
+                {'trigger': 'select_category', 'source': 'category_selection', 'dest': 'service_selection', 'after': 'process_category'},
+                {'trigger': 'select_service', 'source': 'service_selection', 'dest': 'date_input', 'after': 'ask_date'},
+                {'trigger': 'enter_date', 'source': 'date_input', 'dest': 'time_input', 'after': 'ask_time'},
+                {'trigger': 'enter_time', 'source': 'time_input', 'dest': 'confirmation', 'after': 'process_time'},
+                {'trigger': 'confirm_booking', 'source': 'confirmation', 'dest': 'completed', 'after': 'process_booking'},
+                {'trigger': 'cancel_booking', 'source': '*', 'dest': 'cancelled', 'after': 'send_cancellation_message'},
+                {'trigger': 'restart_booking', 'source': '*', 'dest': 'start_booking', 'after': 'send_booking_start_message'}
+            ]
+            user_states[user_id] = BookingFSM(user_id, states=states, transitions=transitions, initial='start_booking')
+            user_states[user_id].start(event)
+            del user_states[user_id]  # 移除會員驗證狀態，進入預約流程
+        else:
+            line_bot_api.reply_message(
+                event.reply_token,
+                TextSendMessage(text="❌ 查無此會員資料，請確認後再試一次。")
+            )
+
+    except Exception as e:
+        reply_text = f"❌ 會員驗證失敗：{str(e)}"
+        logger.error(f"會員驗證錯誤：{e}", exc_info=True)
+        line_bot_api.reply_message(event.reply_token, TextSendMessage(text=reply_text))
     else:
         try:
             client = get_gspread_client()
