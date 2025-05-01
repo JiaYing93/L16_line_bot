@@ -83,7 +83,7 @@ def process_booking(event, booking_category, booking_service, booking_date, book
         line_bot_api.push_message(user_id, TextSendMessage(text=f"✅ 您的 {booking_category} - {booking_service} 預約已成功記錄！"))
     except Exception as e:
         logger.error(f"儲存預約資料到 Google Sheets 失敗：{e}", exc_info=True)
-        line_bot_api.push_message(user_id, TextSendMessage(text="⚠ 儲存預約資料時發生錯誤，請稍後再試。")
+        line_bot_api.push_message(user_id, TextSendMessage(text="⚠ 儲存預約資料時發生錯誤，請稍後再試。"))
 
 class BookingFSM(GraphMachine):
     def __init__(self, user_id, **configs):
