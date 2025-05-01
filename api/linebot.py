@@ -113,14 +113,13 @@ class BookingFSM(GraphMachine):
         )
     )
     line_bot_api.reply_message(event.reply_token, template)
-
-        buttons = [MessageAction(label=cat, text=cat) for cat in categories]
-        template = TemplateSendMessage(
-            alt_text="請選擇預約類別",
-            template=ButtonsTemplate(
-                title="預約選項",
-                text="您想要預約什麼？",
-                actions=buttons
+    buttons = [MessageAction(label=cat, text=cat) for cat in categories]
+    template = TemplateSendMessage(
+        alt_text="請選擇預約類別",
+        template=ButtonsTemplate(
+            title="預約選項",
+            text="您想要預約什麼？",
+            actions=buttons
             )
         )
         line_bot_api.reply_message(event.reply_token, template)
