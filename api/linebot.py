@@ -39,21 +39,28 @@ user_states = {}
 def load_booking_options():
     """從 Google Sheets 載入預約選項 (從三個工作表)"""
     global booking_options
-    booking_options = {"categories": {}}  # 初始化資料結構
+            booking_options = {"categories": {}}  # 初始化資料結構
     try:
         client = get_gspread_client()
         for category, sheet_name in BOOKING_OPTIONS_SHEETS.items():
-            sheet = client.open_by_key(SPREADSHEET_KEY).worksheet(sheet_name)
-            records = sheet.get_all_records()
-            booking_options["categories"][category] = []
-            for row in records:
-                item = row.get("項目")
-                if item:
-                    booking_options["categories"][category].append(item)
-        logger.info("預約選項載入成功： %s", booking_options)
+            logger.info(f"嘗試載入 {category} 的預約選項，工作表名稱：{sheet_name}")  # 新增日誌
+            try:
+                sheet = client.open_by_key(SPREADSHEET_KEY).worksheet(sheet_name)
+                records = sheet.get_all_records()
+                booking_options["categories"][category] = []
+                for row in records:
+                    item = row.get("項目")
+                    if item:
+                        booking_options["categories"][category].append(item)
+                logger.info(f"{category} 載入成功，找到 {len(records)} 筆記錄")  # 新增日誌
+            except gspread.exceptions.WorksheetNotFound:
+                logger.error(f"找不到工作表：{sheet_name}，跳過 {category}", exc_info=True)
+            except Exception as e:
+                logger.error(f"載入 {category} 失敗：{e}", exc_info=True)
     except Exception as e:
         logger.error(f"載入預約選項失敗：{e}", exc_info=True)
         booking_options = {"categories": {}}  # 預設為空
+    logger.info(f"預約選項載入結果：{booking_options}")  # 總結載入結果
 
 
 def process_booking(event, booking_category, booking_service, booking_date, booking_time, user_id):
@@ -90,10 +97,22 @@ class BookingFSM(GraphMachine):
     def ask_category(self, event):
         global booking_options
         categories = list(booking_options["categories"].keys())
+        logger.info(f"ask_category 函數被呼叫，目前 booking_options: {booking_options}")  # 新增日誌
         if not categories:
-            line_bot_api.reply_message(event.reply_token, TextSendMessage(text="目前沒有可預約的類別，請稍後再試。"))
-            self.go_back()
-            return
+        line_bot_api.reply_message(event.reply_token, TextSendMessage(text="目前沒有可預約的類別，請稍後再試。"))
+        self.go_back()
+        return
+
+    buttons = [MessageAction(label=cat, text=cat) for cat in categories]
+    template = TemplateSendMessage(
+        alt_text="請選擇預約類別",
+        template=ButtonsTemplate(
+            title="預約選項",
+            text="您想要預約什麼？",
+            actions=buttons
+        )
+    )
+    line_bot_api.reply_message(event.reply_token, template)
 
         buttons = [MessageAction(label=cat, text=cat) for cat in categories]
         template = TemplateSendMessage(
