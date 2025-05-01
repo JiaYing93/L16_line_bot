@@ -47,7 +47,10 @@ BOOKING_COLUMN_MAPPING = {
 }
 user_states = {}
 
-
+class BookingFSM:
+    def __init__(self, user_id, states, transitions, initial):
+        # 您的初始化程式碼
+        pass
 def load_booking_options():
     global booking_options
     booking_options = {"categories": {}}
