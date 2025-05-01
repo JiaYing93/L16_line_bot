@@ -111,30 +111,20 @@ class BookingFSM(GraphMachine):
         categories = list(booking_options["categories"].keys())
         logger.info(f"ask_category 函數被呼叫，目前 booking_options: {booking_options}")  # 新增日誌
         if not categories:
-                line_bot_api.reply_message(event.reply_token, TextSendMessage(text="目前沒有可預約的類別，請稍後再試。"))
-                self.go_back()
-        return
-
-    buttons = [MessageAction(label=cat, text=cat) for cat in categories]
-    template = TemplateSendMessage(
-        alt_text="請選擇預約類別",
-        template=ButtonsTemplate(
-            title="預約選項",
-            text="您想要預約什麼？",
-            actions=buttons
-        )
-    )
-    line_bot_api.reply_message(event.reply_token, template)
-    buttons = [MessageAction(label=cat, text=cat) for cat in categories]
-    template = TemplateSendMessage(
-        alt_text="請選擇預約類別",
-        template=ButtonsTemplate(
-            title="預約選項",
-            text="您想要預約什麼？",
-            actions=buttons
+            line_bot_api.reply_message(event.reply_token, TextSendMessage(text="目前沒有可預約的類別，請稍後再試。"))
+            self.go_back()
+            return  # 確保在沒有類別時，函數在這裡結束
+        else:
+            buttons = [MessageAction(label=cat, text=cat) for cat in categories]
+            template = TemplateSendMessage(
+                alt_text="請選擇預約類別",
+                template=ButtonsTemplate(
+                    title="預約選項",
+                    text="您想要預約什麼？",
+                    actions=buttons
+                )
             )
-        )
-    line_bot_api.reply_message(event.reply_token, template)
+            line_bot_api.reply_message(event.reply_token, template)
 
     def process_category(self, event):
         self.booking_category = event.message.text
