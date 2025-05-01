@@ -39,7 +39,7 @@ user_states = {}
 def load_booking_options():
     """從 Google Sheets 載入預約選項 (從三個工作表)"""
     global booking_options
-            booking_options = {"categories": {}}  # 初始化資料結構
+    booking_options = {"categories": {}}  # 初始化資料結構
     try:
         client = get_gspread_client()
         for category, sheet_name in BOOKING_OPTIONS_SHEETS.items():
