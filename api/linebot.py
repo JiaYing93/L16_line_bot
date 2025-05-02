@@ -1175,10 +1175,10 @@ def handle_message(event):
                     TextSendMessage(text="❌ 查無此會員資料，請確認後再試一次。")
                 )
 
-    except Exception as e:
-        logger.error(f"User {user_id}: 預約驗證 - 發生錯誤: {e}", exc_info=True)
-        reply_text = f"❌ 會員驗證失敗：{str(e)}"
-        line_bot_api.reply_message(event.reply_token, TextSendMessage(text=reply_text))
+        except Exception as e:
+            logger.error(f"User {user_id}: 預約驗證 - 發生錯誤: {e}", exc_info=True)
+            reply_text = f"❌ 會員驗證失敗：{str(e)}"
+            line_bot_api.reply_message(event.reply_token, TextSendMessage(text=reply_text))
     else:
         try:
             client = get_gspread_client()
