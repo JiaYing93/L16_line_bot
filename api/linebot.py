@@ -55,7 +55,7 @@ def load_booking_options():
                 records = sheet.get_all_records()
                 booking_options["categories"][category] = []
                 for row in records:
-                    item = row.get("項目")
+                    item = row.get(column_name)
                     if item:
                         booking_options["categories"][category].append(item)
                 logger.info(f"{category} 載入成功，找到 {len(records)} 筆記錄")
