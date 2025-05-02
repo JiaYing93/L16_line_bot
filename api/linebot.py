@@ -55,16 +55,15 @@ def load_booking_options():
             try:
                 sheet = client.open_by_key(SPREADSHEET_KEY).worksheet(sheet_name)
                 records = sheet.get_all_records()
-                booking_options["categories"][category] = [
-                    row.get(column_name) for row in records if row.get(column_name)
-                ]
-                logger.info(f"{category} 載入成功，共 {len(booking_options['categories'][category])} 筆選項")
+                options = [row.get(column_name) for row in records if row.get(column_name)]
+                booking_options["categories"][category] = options
+                logger.info(f"✅ {category} 選項載入成功，共 {len(options)} 筆：{options}")
             except gspread.exceptions.WorksheetNotFound:
-                logger.error(f"找不到工作表：{sheet_name}，跳過 {category}")
+                logger.error(f"❌ 找不到工作表：{sheet_name}，跳過 {category}")
             except Exception as e:
-                logger.error(f"載入 {category} 失敗：{e}", exc_info=True)
+                logger.error(f"❌ 載入 {category} 失敗：{e}", exc_info=True)
     except Exception as e:
-        logger.error(f"整體載入預約選項失敗：{e}", exc_info=True)
+        logger.critical(f"❌ 預約資料整體載入失敗：{e}", exc_info=True)
         booking_options = {"categories": {}}
 
 def process_booking(event, booking_category, booking_service, booking_date, booking_time, user_id, member_name):
@@ -119,7 +118,7 @@ class BookingFSM(GraphMachine):
         logger.info(f"[FSM] 該類別對應服務選項：{services}")
 
         if services:
-            buttons = [MessageAction(label=service, text=service) for service in services[:4]]  # 最多4個
+            buttons = [MessageAction(label=service, text=service) for service in services[:4]]  # 最多 4 個
             template = TemplateSendMessage(
                 alt_text="請選擇預約項目",
                 template=ButtonsTemplate(
@@ -131,9 +130,10 @@ class BookingFSM(GraphMachine):
             line_bot_api.reply_message(event.reply_token, template)
             self.next_state()
         else:
+            logger.warning(f"[FSM] 找不到任何服務選項 for 類別：{self.booking_category}")
             line_bot_api.reply_message(
                 event.reply_token,
-                TextSendMessage(text=f"{self.booking_category} 目前沒有可預約的項目，請重新選擇類別。")
+                TextSendMessage(text=f"{self.booking_category} 目前沒有任何可預約項目，請稍後再試。")
             )
             self.go_back()
 
