@@ -27,14 +27,6 @@ line_bot_api = LineBotApi(os.getenv("LINE_CHANNEL_ACCESS_TOKEN"))
 line_handler = WebhookHandler(os.getenv("LINE_CHANNEL_SECRET"))
 SPREADSHEET_KEY = os.getenv("GOOGLE_SPREADSHEET_KEY")
 
-user_states[user_id] = BookingFSM(
-    user_id,
-    states=states,
-    transitions=transitions,
-    initial='start_booking'
-)
-user_states[user_id].member_name = member_data['姓名']  # ✅ 儲存會員姓名
-user_states[user_id].start(event)
 BOOKING_OPTIONS_SHEETS = {
     '團體課程': '課程資料',
     '私人教練': '教練資料',
