@@ -62,6 +62,11 @@ def load_booking_options():
                 logger.error(f"❌ 找不到工作表：{sheet_name}，跳過 {category}")
             except Exception as e:
                 logger.error(f"❌ 載入 {category} 失敗：{e}", exc_info=True)
+
+        logger.info("[DEBUG] booking_options 結構如下：")
+        for category, items in booking_options["categories"].items():
+            logger.info(f" - {category}：{len(items)} 項目 → {items}")
+
     except Exception as e:
         logger.critical(f"❌ 預約資料整體載入失敗：{e}", exc_info=True)
         booking_options = {"categories": {}}
@@ -133,10 +138,9 @@ class BookingFSM(GraphMachine):
             logger.warning(f"[FSM] 找不到任何服務選項 for 類別：{self.booking_category}")
             line_bot_api.reply_message(
                 event.reply_token,
-                TextSendMessage(text=f"{self.booking_category} 目前沒有任何可預約項目，請稍後再試。")
+                TextSendMessage(text=f"❌ {self.booking_category} 目前沒有任何可預約項目，請確認資料或稍後再試。")
             )
             self.go_back()
-
     def process_service(self, event):
         self.booking_service = event.message.text
         if (
