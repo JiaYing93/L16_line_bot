@@ -1162,6 +1162,26 @@ def handle_message(event):
                 event.reply_token,
                 TextSendMessage(text=f"❌ 會員驗證失敗，請稍後再試。")
             )
+    elif:
+        fsm = user_states.get(user_id)
+        if isinstance(fsm, BookingFSM):
+            if fsm.state == "category_selection":
+                fsm.select_category(event)
+            elif fsm.state == "service_selection":
+                fsm.select_service(event)
+            elif fsm.state == "date_input":
+                fsm.enter_date(event)
+            elif fsm.state == "time_input":
+                fsm.enter_time(event)
+            elif fsm.state == "confirmation":
+                fsm.confirm_booking(event)
+            else:
+                logger.warning(f"[FSM] 使用者 {user_id} 處於未知狀態：{fsm.state}")
+        else:
+            line_bot_api.reply_message(
+                event.reply_token,
+                TextSendMessage(text="請先輸入『我要預約』以開始預約流程。")
+            )
     else:
         try:
             client = get_gspread_client()
