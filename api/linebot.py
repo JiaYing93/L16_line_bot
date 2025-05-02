@@ -49,7 +49,8 @@ def load_booking_options():
     try:
         client = get_gspread_client()
         for category, sheet_name in BOOKING_OPTIONS_SHEETS.items():
-            logger.info(f"嘗試載入 {category} 的預約選項，工作表名稱：{sheet_name}")
+            column_name = BOOKING_COLUMN_MAPPING.get(sheet_name, "項目")  # ✅ 根據工作表取得欄位名稱
+            logger.info(f"嘗試載入 {category} 的預約選項，工作表名稱：{sheet_name}，使用欄位：{column_name}")
             try:
                 sheet = client.open_by_key(SPREADSHEET_KEY).worksheet(sheet_name)
                 records = sheet.get_all_records()
@@ -58,13 +59,13 @@ def load_booking_options():
                     item = row.get(column_name)
                     if item:
                         booking_options["categories"][category].append(item)
-                logger.info(f"{category} 載入成功，找到 {len(records)} 筆記錄")
+                logger.info(f"{category} 載入成功，找到 {len(booking_options['categories'][category])} 筆選項")
             except gspread.exceptions.WorksheetNotFound:
                 logger.error(f"找不到工作表：{sheet_name}，跳過 {category}", exc_info=True)
             except Exception as e:
                 logger.error(f"載入 {category} 失敗：{e}", exc_info=True)
     except Exception as e:
-        logger.error(f"載入預約選項失敗：{e}", exc_info=True)
+        logger.error(f"整體載入預約選項失敗：{e}", exc_info=True)
         booking_options = {"categories": {}}
     logger.info(f"預約選項載入結果：{booking_options}")
 
@@ -72,7 +73,7 @@ def load_booking_options():
 def process_booking(event, booking_category, booking_service, booking_date, booking_time, user_id, member_name):
     try:
         client = get_gspread_client()
-        sheet = client.open_by_key(SPREADSHEET_KEY).worksheet("預約總表")
+        sheet = client.open_by_key(SPREADSHEET_KEY).worksheet("預約項目")
         booking_data = [user_id, member_name, booking_category, booking_service, booking_date, booking_time]
         sheet.append_row(booking_data)
         line_bot_api.push_message(user_id, TextSendMessage(text=f"✅ 您的 {booking_category} - {booking_service} 預約已成功記錄！"))
