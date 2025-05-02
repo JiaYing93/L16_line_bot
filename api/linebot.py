@@ -112,30 +112,30 @@ class BookingFSM(GraphMachine):
             line_bot_api.reply_message(event.reply_token, template)
 
     def process_category(self, event):
-    self.booking_category = event.message.text
-    logger.info(f"[FSM] 使用者選擇的類別：{self.booking_category}")
+        self.booking_category = event.message.text
+        logger.info(f"[FSM] 使用者選擇的類別：{self.booking_category}")
 
-    services = booking_options["categories"].get(self.booking_category)
-    logger.info(f"[FSM] 該類別對應服務選項：{services}")
+        services = booking_options["categories"].get(self.booking_category)
+        logger.info(f"[FSM] 該類別對應服務選項：{services}")
 
-    if services:
-        buttons = [MessageAction(label=service, text=service) for service in services[:4]]  # 最多4個
-        template = TemplateSendMessage(
-            alt_text="請選擇預約項目",
-            template=ButtonsTemplate(
-                title=f"{self.booking_category} 預約",
-                text="您想預約哪個項目？",
-                actions=buttons
+        if services:
+            buttons = [MessageAction(label=service, text=service) for service in services[:4]]  # 最多4個
+            template = TemplateSendMessage(
+                alt_text="請選擇預約項目",
+                template=ButtonsTemplate(
+                    title=f"{self.booking_category} 預約",
+                    text="您想預約哪個項目？",
+                    actions=buttons
+                )
             )
-        )
-        line_bot_api.reply_message(event.reply_token, template)
-        self.next_state()
-    else:
-        line_bot_api.reply_message(
-            event.reply_token,
-            TextSendMessage(text=f"{self.booking_category} 目前沒有可預約的項目，請重新選擇類別。")
-        )
-        self.go_back()
+            line_bot_api.reply_message(event.reply_token, template)
+            self.next_state()
+        else:
+            line_bot_api.reply_message(
+                event.reply_token,
+                TextSendMessage(text=f"{self.booking_category} 目前沒有可預約的項目，請重新選擇類別。")
+            )
+            self.go_back()
 
     def process_service(self, event):
         self.booking_service = event.message.text
