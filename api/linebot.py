@@ -20,14 +20,14 @@ import time
 from threading import Thread
 
 app = Flask(__name__)
-logger.info(f"[DEBUG] 當前使用的 SPREADSHEET_KEY: {SPREADSHEET_KEY}")
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 logger = logging.getLogger(__name__)
 
 line_bot_api = LineBotApi(os.getenv("LINE_CHANNEL_ACCESS_TOKEN"))
 line_handler = WebhookHandler(os.getenv("LINE_CHANNEL_SECRET"))
-SPREADSHEET_KEY = os.getenv("GOOGLE_SPREADSHEET_KEY")
 
+SPREADSHEET_KEY = os.getenv("GOOGLE_SPREADSHEET_KEY")
+logger.info(f"[DEBUG] 當前使用的 SPREADSHEET_KEY: {SPREADSHEET_KEY}")
 BOOKING_OPTIONS_SHEETS = {
     '團體課程': '課程資料',
     '私人教練': '教練資料',
