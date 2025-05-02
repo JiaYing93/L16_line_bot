@@ -1136,9 +1136,7 @@ def handle_message(event):
     elif user_states.get(user_id) == "awaiting_member_check_before_booking":
         user_states.pop(user_id)
         keyword = user_msg.strip()
-        logger.info(f"User {user_id}: keyword (name) set to '{keyword}'")
-
-        logger.info(f"User {user_id}: user_states value is '{user_states.get(user_id)}', keyword is '{keyword}' before try block")
+        logger.info(f"User {user_id}: 預約驗證 - 使用者輸入姓名: '{keyword}'")
 
         try:
             client = get_gspread_client()
@@ -1151,6 +1149,8 @@ def handle_message(event):
             )
 
             if member_data:
+                logger.info(f"User {user_id}: 預約驗證 - 找到會員: {member_data['姓名']}")
+
             # 建立 FSM 狀態機並啟動流程
                 states = ['start_booking', 'category_selection', 'service_selection', 'date_input', 'time_input', 'confirmation', 'completed', 'cancelled']
                 transitions = [
@@ -1167,16 +1167,18 @@ def handle_message(event):
                 fsm.member_name = member_data['姓名']  # ✅ 儲存會員姓名
                 user_states[user_id] = fsm
                 fsm.start(event)  # ✅ 啟動預約流程
+
             else:
+                logger.info(f"User {user_id}: 預約驗證 - 查無此會員")
                 line_bot_api.reply_message(
                     event.reply_token,
                     TextSendMessage(text="❌ 查無此會員資料，請確認後再試一次。")
                 )
 
-        except Exception as e:
-            reply_text = f"❌ 會員驗證失敗：{str(e)}"
-            logger.error(f"會員驗證錯誤：{e}", exc_info=True)
-            line_bot_api.reply_message(event.reply_token, TextSendMessage(text=reply_text))
+    except Exception as e:
+        logger.error(f"User {user_id}: 預約驗證 - 發生錯誤: {e}", exc_info=True)
+        reply_text = f"❌ 會員驗證失敗：{str(e)}"
+        line_bot_api.reply_message(event.reply_token, TextSendMessage(text=reply_text))
     else:
         try:
             client = get_gspread_client()
