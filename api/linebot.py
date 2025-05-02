@@ -1162,7 +1162,7 @@ def handle_message(event):
                 event.reply_token,
                 TextSendMessage(text=f"❌ 會員驗證失敗，請稍後再試。")
             )
-    elif:
+    else:
         fsm = user_states.get(user_id)
         if isinstance(fsm, BookingFSM):
             if fsm.state == "category_selection":
@@ -1178,62 +1178,57 @@ def handle_message(event):
             else:
                 logger.warning(f"[FSM] 使用者 {user_id} 處於未知狀態：{fsm.state}")
         else:
-            line_bot_api.reply_message(
-                event.reply_token,
-                TextSendMessage(text="請先輸入『我要預約』以開始預約流程。")
-            )
-    else:
-        try:
-            client = get_gspread_client()
-            sheet = client.open_by_key("1jVhpPNfB6UrRaYZjCjyDR4GZApjYLL4KZXQ1Si63Zyg").worksheet("場地資料")
-            records = sheet.get_all_records()
+            try:
+                client = get_gspread_client()
+                sheet = client.open_by_key("1jVhpPNfB6UrRaYZjCjyDR4GZApjYLL4KZXQ1Si63Zyg").worksheet("場地資料")
+                records = sheet.get_all_records()
 
-            matched = next((row for row in records if row.get("名稱") == user_msg), None)
+                matched = next((row for row in records if row.get("名稱") == user_msg), None)
 
-            if matched and matched.get("圖片1", "").startswith("https"):
-                bubble = {
-                    "type": "bubble",
-                    "hero": {
-                        "type": "image",
-                        "url": matched["圖片1"],
-                        "size": "full",
-                        "aspectRatio": "20:13",
-                        "aspectMode": "cover"
-                    },
-                    "body": {
-                        "type": "box",
-                        "layout": "vertical",
-                        "spacing": "sm",
-                        "contents": [
-                            {
-                                "type": "text",
-                                "text": matched["名稱"],
-                                "weight": "bold",
-                                "size": "xl",
-                                "wrap": True
-                            },
-                            {
-                                "type": "text",
-                                "text": matched["描述"],
-                                "size": "sm",
-                                "wrap": True,
-                                "color": "#666666"
-                            }
-                        ]
+                if matched and matched.get("圖片1", "").startswith("https"):
+                    bubble = {
+                        "type": "bubble",
+                        "hero": {
+                            "type": "image",
+                            "url": matched["圖片1"],
+                            "size": "full",
+                            "aspectRatio": "20:13",
+                            "aspectMode": "cover"
+                        },
+                        "body": {
+                            "type": "box",
+                            "layout": "vertical",
+                            "spacing": "sm",
+                            "contents": [
+                                {
+                                    "type": "text",
+                                    "text": matched["名稱"],
+                                    "weight": "bold",
+                                    "size": "xl",
+                                    "wrap": True
+                                },
+                                {
+                                    "type": "text",
+                                    "text": matched["描述"],
+                                    "size": "sm",
+                                    "wrap": True,
+                                    "color": "#666666"
+                                }
+                            ]
+                        }
                     }
-                }
 
-                flex_msg = FlexSendMessage(
-                    alt_text=f"{matched['名稱']} 詳細資訊",
-                    contents=bubble
-                )
-                line_bot_api.reply_message(event.reply_token, flex_msg)
-            else:
-                line_bot_api.reply_message(event.reply_token, TextSendMessage(text="❌ 查無該場地資料"))
+                    flex_msg = FlexSendMessage(
+                        alt_text=f"{matched['名稱']} 詳細資訊",
+                        contents=bubble
+                    )
+                    line_bot_api.reply_message(event.reply_token, flex_msg)
+                else:
+                    line_bot_api.reply_message(event.reply_token, TextSendMessage(text="❌ 查無該場地資料"))
 
-        except Exception as e:
-            logger.error(f"場地詳情查詢失敗：{e}", exc_info=True)
-            line_bot_api.reply_message(event.reply_token, TextSendMessage(text=f"⚠ 發生錯誤：{e}"))
+            except Exception as e:
+                logger.error(f"場地詳情查詢失敗：{e}", exc_info=True)
+                line_bot_api.reply_message(event.reply_token, TextSendMessage(text=f"⚠ 發生錯誤：{e}"))
 load_booking_options()  # 載入預約資料選項
 if __name__ == "__main__":
     
