@@ -73,7 +73,7 @@ def load_booking_options():
 def process_booking(event, booking_category, booking_service, booking_date, booking_time, user_id, member_name):
     try:
         client = get_gspread_client()
-        sheet = client.open_by_key(SPREADSHEET_KEY).worksheet("預約項目")
+        sheet = client.open_by_key(SPREADSHEET_KEY).worksheet("預約選項")
         booking_data = [user_id, member_name, booking_category, booking_service, booking_date, booking_time]
         sheet.append_row(booking_data)
         line_bot_api.push_message(user_id, TextSendMessage(text=f"✅ 您的 {booking_category} - {booking_service} 預約已成功記錄！"))
