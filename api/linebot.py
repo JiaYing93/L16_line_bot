@@ -35,7 +35,7 @@ BOOKING_OPTIONS_SHEETS = {
 }
 BOOKING_COLUMN_MAPPING = {
     '課程資料': '課程名稱',
-    '教練資料': '姓名',
+    '教練資料': '專長',
     '場地資料': '名稱'
 }
 user_states = {}
