@@ -284,10 +284,11 @@ class BookingFSM(GraphMachine):
                 line_bot_api.reply_message(event.reply_token, TextSendMessage(text="❌ 無效的預約項目，請重新選擇。"))
 
     def ask_date(self, event):
-        line_bot_api.reply_message(
-            event.reply_token,
-            TextSendMessage(text="請輸入您想預約的日期 (YYYY-MM-DD)。")
-        )
+        if self.booking_category == "團體課程":
+            message = "📅 請輸入欲上課的日期（格式：YYYY-MM-DD），請確認是否落在該課程的開課與結束日期之間。"
+        else:
+            message = "📅 請輸入預約日期（格式：YYYY-MM-DD）："
+        line_bot_api.reply_message(event.reply_token, TextSendMessage(text=message))
 
     def enter_date(self, event):
         self.booking_date = event.message.text.strip()
@@ -299,11 +300,67 @@ class BookingFSM(GraphMachine):
         line_bot_api.reply_message(event.reply_token, TextSendMessage(text="請輸入預約時間 (HH:MM)。"))
 
     def enter_time(self, event):
-        self.booking_time = event.message.text.strip()
-        logger.info(f"[FSM] 使用者輸入時間：{self.booking_time}")
-        self.confirm_booking(event)
-        self.next_state()
+        user_input = event.message.text.strip()
+        try:
+            booking_time = datetime.strptime(user_input, "%H:%M").time()
+            booking_datetime = datetime.combine(self.booking_date, booking_time)
 
+            logger.info(f"[FSM] 使用者輸入時間：{booking_datetime}")
+
+        # 取得對應試算表與欄位
+            sheet_name = BOOKING_SHEET_MAPPING.get(self.booking_category)
+            if not sheet_name:
+                raise ValueError("無法對應的工作表")
+
+            column_name = "時間"  # 根據你的工作表格式調整
+            date_column = "日期"
+            target_column = None
+
+        # 若是私人教練 → 檢查教練時間衝突；場地 → 場地名稱；團體課程不檢查衝突
+            if self.booking_category == "私人教練":
+                target_column = "教練姓名"
+                target_value = self.selected_service
+            elif self.booking_category == "場地租借":
+                target_column = "場地"
+                target_value = self.selected_service
+            else:
+            # 團體課程不檢查衝突
+                self.booking_time = booking_time
+                self.next_state()
+                return
+
+        # 讀取現有預約資料並檢查衝突
+            client = get_gspread_client()
+            sheet = client.open_by_key(SPREADSHEET_KEY).worksheet(sheet_name)
+            records = sheet.get_all_records()
+
+        # 檢查與同一資源（教練/場地）在同一天的所有預約
+            conflict_found = False
+            for row in records:
+                if (row.get(date_column) == self.booking_date.strftime("%Y-%m-%d") and
+                    row.get(target_column) == target_value and
+                    row.get(column_name)):
+
+                    existing_time = datetime.strptime(row[column_name], "%H:%M").time()
+                    existing_dt = datetime.combine(self.booking_date, existing_time)
+
+                # 若時間差小於 2 小時，表示衝突
+                    if abs((booking_datetime - existing_dt).total_seconds()) < 2 * 3600:
+                        conflict_found = True
+                        break
+
+            if conflict_found:
+                line_bot_api.reply_message(
+                    event.reply_token,
+                    TextSendMessage(text="❌ 此時間已有人預約，請選擇距離他人至少 2 小時的時間。")
+                )
+            else:
+                self.booking_time = booking_time
+                self.next_state()
+
+        except ValueError:
+            logger.warning(f"[FSM] 時間格式錯誤：{user_input}")
+            line_bot_api.reply_message(event.reply_token, TextSendMessage(text="❌ 時間格式錯誤，請輸入 HH:MM，例如 13:00"))
 
     def process_time(self, event):
         self.booking_time = event.message.text
