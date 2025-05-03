@@ -29,8 +29,8 @@ line_handler = WebhookHandler(os.getenv("LINE_CHANNEL_SECRET"))
 SPREADSHEET_KEY = os.getenv("GOOGLE_SPREADSHEET_KEY")
 logger.info(f"[DEBUG] 當前使用的 SPREADSHEET_KEY: {SPREADSHEET_KEY}")
 BOOKING_OPTIONS_SHEETS = {
-    '團體課程': '課程資料',
-    '私人教練': '教練資料',
+    '預約團體課程': '課程資料',
+    '預約私人教練': '教練資料',
     '場地租借': '場地資料'
 }
 BOOKING_COLUMN_MAPPING = {
@@ -240,8 +240,8 @@ class BookingFSM(GraphMachine):
 
                 # 定義類別與試算表工作表名稱的對應關係
                 category_to_sheet = {
-                    "團體課程": "課程資料",
-                    "私人教練": "教練資料",
+                    "預約團體課程": "課程資料",
+                    "預約私人教練": "教練資料",
                     "場地租借": "場地資料",
                 }
 
