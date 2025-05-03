@@ -41,42 +41,7 @@ BOOKING_COLUMN_MAPPING = {
 user_states = {}
 
 class BookingFSM:
-    
-from datetime import datetime, timedelta
-
-def generate_available_times(sheet_name, booking_service):
-    try:
-        client = get_gspread_client()
-        sheet = client.open_by_key(SPREADSHEET_KEY).worksheet(sheet_name)
-        records = sheet.get_all_records()
-        column_key = BOOKING_COLUMN_MAPPING.get(sheet_name)
-
-        for row in records:
-            if row.get(column_key) == booking_service:
-                start_time_str = row.get("開始時間")
-                end_time_str = row.get("結束時間")
-
-                if not start_time_str or not end_time_str:
-                    return []
-
-                fmt = "%H:%M"
-                start = datetime.strptime(start_time_str, fmt)
-                end = datetime.strptime(end_time_str, fmt)
-
-                # 生成每30分鐘一個時段
-                times = []
-                current = start
-                while current < end:
-                    times.append(current.strftime(fmt))
-                    current += timedelta(minutes=30)
-
-                return times
-        return []
-    except Exception as e:
-        logger.error(f"[時間生成失敗] {e}", exc_info=True)
-        return []
-
-def __init__(self, user_id, states, transitions, initial):
+    def __init__(self, user_id, states, transitions, initial):
         # 您的初始化程式碼
         pass
 def load_booking_options():
@@ -202,6 +167,41 @@ class BookingFSM(GraphMachine):
     def ask_service(self, event, services):
         from linebot.models import TemplateSendMessage, CarouselTemplate, CarouselColumn, MessageAction
 
+from datetime import datetime, timedelta
+
+def generate_available_times(sheet_name, booking_service):
+    try:
+        client = get_gspread_client()
+        sheet = client.open_by_key(SPREADSHEET_KEY).worksheet(sheet_name)
+        records = sheet.get_all_records()
+        column_key = BOOKING_COLUMN_MAPPING.get(sheet_name)
+
+        for row in records:
+            if row.get(column_key) == booking_service:
+                start_time_str = row.get("開始時間")
+                end_time_str = row.get("結束時間")
+
+                if not start_time_str or not end_time_str:
+                    return []
+
+                fmt = "%H:%M"
+                start = datetime.strptime(start_time_str, fmt)
+                end = datetime.strptime(end_time_str, fmt)
+
+                # 生成每30分鐘一個時段
+                times = []
+                current = start
+                while current < end:
+                    times.append(current.strftime(fmt))
+                    current += timedelta(minutes=30)
+
+                return times
+        return []
+    except Exception as e:
+        logger.error(f"[時間生成失敗] {e}", exc_info=True)
+        return []
+
+
         columns = []
         for i in range(0, len(services), 3):
             batch = services[i:i+3]
@@ -218,7 +218,31 @@ class BookingFSM(GraphMachine):
         )
         line_bot_api.reply_message(event.reply_token, template)
 
-    def ask_date(self, event):
+    
+
+from linebot.models import QuickReply, QuickReplyButton, MessageAction, TextSendMessage
+
+def send_time_options(event, sheet_name, service_name):
+    times = generate_available_times(sheet_name, service_name)
+    if not times:
+        line_bot_api.reply_message(
+            event.reply_token,
+            TextSendMessage(text="無可預約時段，請稍後再試。")
+        )
+        return
+
+    # QuickReply 一次最多 13 個按鈕，這裡取前 12 個時間段
+    buttons = [QuickReplyButton(action=MessageAction(label=t, text=t)) for t in times[:12]]
+
+    line_bot_api.reply_message(
+        event.reply_token,
+        TextSendMessage(
+            text="請選擇預約時間：",
+            quick_reply=QuickReply(items=buttons)
+        )
+    )
+
+def ask_date(self, event):
         line_bot_api.reply_message(
             event.reply_token,
             TextSendMessage(text="請輸入您想預約的日期 (YYYY-MM-DD)。")
