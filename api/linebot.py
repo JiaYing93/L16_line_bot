@@ -1,4 +1,3 @@
-
 from flask import Flask, request, abort
 from linebot import LineBotApi, WebhookHandler
 from linebot.exceptions import InvalidSignatureError
@@ -124,21 +123,16 @@ class BookingFSM(GraphMachine):
         logger.info(f"[FSM] 該類別對應服務選項：{services}")
 
         if services:
-            if len(services) <= 4:
-            # 少於 4 項使用 ButtonsTemplate
-                buttons = [MessageAction(label=service, text=service) for service in services]
-                template = TemplateSendMessage(
-                    alt_text="請選擇預約項目",
-                    template=ButtonsTemplate(
-                        title=f"{self.booking_category} 預約",
-                        text="您想預約哪個項目？",
-                        actions=buttons
-                    )
+            buttons = [MessageAction(label=service, text=service) for service in services[:4]]  # 最多 4 個
+            template = TemplateSendMessage(
+                alt_text="請選擇預約項目",
+                template=ButtonsTemplate(
+                    title=f"{self.booking_category} 預約",
+                    text="您想預約哪個項目？",
+                    actions=buttons
                 )
-                line_bot_api.reply_message(event.reply_token, template)
-            else:
-            # 超過 4 項使用 CarouselTemplate
-                self.ask_service(event, services)
+            )
+            line_bot_api.reply_message(event.reply_token, template)
             self.next_state()
         else:
             logger.warning(f"[FSM] 找不到任何服務選項 for 類別：{self.booking_category}")
@@ -189,6 +183,11 @@ class BookingFSM(GraphMachine):
             event.reply_token,
             TextSendMessage(text="請輸入您想預約的日期 (YYYY-MM-DD)。")
         )
+
+    def process_date(self, event):
+        self.booking_date = event.message.text
+        line_bot_api.reply_message(event.reply_token, TextSendMessage(text=f"請輸入預約時間 (HH:MM)。"))
+        self.next_state()
 
     def enter_date(self, event):
         self.booking_date = event.message.text.strip()
