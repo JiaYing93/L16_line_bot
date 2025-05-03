@@ -1,3 +1,4 @@
+
 from flask import Flask, request, abort
 from linebot import LineBotApi, WebhookHandler
 from linebot.exceptions import InvalidSignatureError
@@ -29,8 +30,8 @@ line_handler = WebhookHandler(os.getenv("LINE_CHANNEL_SECRET"))
 SPREADSHEET_KEY = os.getenv("GOOGLE_SPREADSHEET_KEY")
 logger.info(f"[DEBUG] 當前使用的 SPREADSHEET_KEY: {SPREADSHEET_KEY}")
 BOOKING_OPTIONS_SHEETS = {
-    '預約團體課程': '課程資料',
-    '預約私人教練': '教練資料',
+    '團體課程': '課程資料',
+    '私人教練': '教練資料',
     '場地租借': '場地資料'
 }
 BOOKING_COLUMN_MAPPING = {
@@ -240,8 +241,8 @@ class BookingFSM(GraphMachine):
 
                 # 定義類別與試算表工作表名稱的對應關係
                 category_to_sheet = {
-                    "預約團體課程": "課程資料",
-                    "預約私人教練": "教練資料",
+                    "團體課程": "課程資料",
+                    "私人教練": "教練資料",
                     "場地租借": "場地資料",
                 }
 
@@ -340,12 +341,8 @@ def callback():
 @line_handler.add(MessageEvent, message=TextMessage)
 def handle_message(event):
     user_id = event.source.user_id
-    user_state = user_states.get(user_id)
-    if user_state is None:
-        user_state = {"category": None, "step": None}
-        user_states[user_id] = user_state
-    category = user_state.get("category")
-    step = user_state.get("step")
+    user_msg = event.message.text.strip()
+    logger.info(f"使用者 {user_id} 傳送訊息：{user_msg}")
     # 會員專區選單
     if user_msg == "會員專區":
         template = TemplateSendMessage(
