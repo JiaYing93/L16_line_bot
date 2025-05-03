@@ -231,6 +231,58 @@ class BookingFSM(GraphMachine):
         )
         line_bot_api.reply_message(event.reply_token, template)
 
+    def select_service(self, event):
+        user_input = event.message.text
+
+    # ✅ 特別處理：預約私人教練（兩層選擇）
+        if self.booking_category == "預約私人教練":
+            services = booking_options["categories"][self.booking_category]["專長"]
+
+        # 如果還沒選擇專長 → 那這次是選擇「專長」
+            if not hasattr(self, 'coach_specialty'):
+                if user_input not in services:
+                    line_bot_api.reply_message(event.reply_token, TextSendMessage(text="❌ 無效的專長選項，請重新選擇。"))
+                    return
+                self.coach_specialty = user_input  # 儲存專長
+                coach_list = services[user_input]
+                self.temp_data["教練列表"] = coach_list
+
+            # 顯示教練名單
+                if len(coach_list) <= 4:
+                    buttons = [MessageAction(label=coach, text=coach) for coach in coach_list]
+                    template = TemplateSendMessage(
+                        alt_text="請選擇教練",
+                        template=ButtonsTemplate(
+                            title=f"{user_input} 專長的教練",
+                            text="請選擇教練姓名：",
+                            actions=buttons
+                        )
+                    )
+                    line_bot_api.reply_message(event.reply_token, template)
+                else:
+                    self.ask_service(event, coach_list, prompt="請選擇教練姓名")
+
+                return  # 還沒跳到下一步（等選完教練）
+
+        # ✅ 已經選過專長 → 現在是選教練
+            elif user_input in self.temp_data.get("教練列表", []):
+                self.selected_service = user_input  # 選定的教練姓名
+                self.next_state()
+                self.ask_date(event)
+            else:
+                line_bot_api.reply_message(event.reply_token, TextSendMessage(text="❌ 無效的教練姓名，請重新選擇。"))
+                return
+
+        else:
+        # ✅ 一般類型（場地租借、團體課程）
+            services = booking_options["categories"][self.booking_category].get("items", [])
+            if user_input in services:
+                self.selected_service = user_input
+                self.next_state()
+                self.ask_date(event)
+            else:
+                line_bot_api.reply_message(event.reply_token, TextSendMessage(text="❌ 無效的預約項目，請重新選擇。"))
+
     def ask_date(self, event):
         line_bot_api.reply_message(
             event.reply_token,
