@@ -340,8 +340,12 @@ def callback():
 @line_handler.add(MessageEvent, message=TextMessage)
 def handle_message(event):
     user_id = event.source.user_id
-    user_msg = event.message.text.strip()
-    logger.info(f"使用者 {user_id} 傳送訊息：{user_msg}")
+    user_state = user_states.get(user_id)
+    if user_state is None:
+        user_state = {"category": None, "step": None}
+        user_states[user_id] = user_state
+    category = user_state.get("category")
+    step = user_state.get("step")
     # 會員專區選單
     if user_msg == "會員專區":
         template = TemplateSendMessage(
