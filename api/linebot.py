@@ -2,10 +2,6 @@ from flask import Flask, request, abort
 from linebot import LineBotApi, WebhookHandler
 from linebot.exceptions import InvalidSignatureError
 from linebot.models import (
-    MessageEvent, TextMessage, TextSendMessage,
-    TemplateSendMessage, ButtonsTemplate, MessageAction, FlexSendMessage,
-    ConfirmTemplate, ImageCarouselTemplate, ImageCarouselColumn
-)
 from transitions.extensions import GraphMachine
 import os
 import json
@@ -18,6 +14,13 @@ import re
 import schedule
 import time
 from threading import Thread
+from datetime import datetime, timedelta
+from linebot.models import QuickReply, QuickReplyButton, MessageAction, TextSendMessage
+
+    MessageEvent, TextMessage, TextSendMessage,
+    TemplateSendMessage, ButtonsTemplate, MessageAction, FlexSendMessage,
+    ConfirmTemplate, ImageCarouselTemplate, ImageCarouselColumn
+)
 
 app = Flask(__name__)
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
@@ -43,6 +46,7 @@ user_states = {}
 class BookingFSM:
     def __init__(self, user_id, states, transitions, initial):
         # 您的初始化程式碼
+    pass
         pass
 def load_booking_options():
     global booking_options
@@ -167,7 +171,7 @@ class BookingFSM(GraphMachine):
     def ask_service(self, event, services):
         from linebot.models import TemplateSendMessage, CarouselTemplate, CarouselColumn, MessageAction
 
-from datetime import datetime, timedelta
+    pass
 
 def generate_available_times(sheet_name, booking_service):
     try:
@@ -220,7 +224,6 @@ def generate_available_times(sheet_name, booking_service):
 
     
 
-from linebot.models import QuickReply, QuickReplyButton, MessageAction, TextSendMessage
 
 def send_time_options(event, sheet_name, service_name):
     times = generate_available_times(sheet_name, service_name)
