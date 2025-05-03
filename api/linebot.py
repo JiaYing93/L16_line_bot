@@ -460,6 +460,50 @@ class BookingFSM(GraphMachine):
             event.reply_token, TextSendMessage(text="好的，請按照步驟完成預約。")
         )
         self.next_state()  # 切換到 category_selection
+
+def ask_coach_name(self, event):
+    self.selected_expertise = event.message.text.strip()
+    logger.info(f"[FSM] 使用者選擇的教練專長：{self.selected_expertise}")
+
+    try:
+        client = get_gspread_client()
+        sheet = client.open_by_key(SPREADSHEET_KEY).worksheet("私人教練")
+        records = sheet.get_all_records()
+
+        coach_list = sorted(set(
+            row["教練姓名"] for row in records
+            if row.get("專長") == self.selected_expertise and row.get("教練姓名")
+        ))
+
+        if not coach_list:
+            raise ValueError("找不到符合的教練")
+
+        buttons = [MessageAction(label=coach, text=coach) for coach in coach_list[:4]]
+        if len(coach_list) > 4:
+            self.ask_service(event, coach_list)
+        else:
+            template = TemplateSendMessage(
+                alt_text="請選擇教練",
+                template=ButtonsTemplate(
+                    title="私人教練 - 教練選擇",
+                    text=f"您想預約哪位{self.selected_expertise}的教練？",
+                    actions=buttons
+                )
+            )
+            line_bot_api.reply_message(event.reply_token, template)
+
+        self.next_state()
+    except Exception as e:
+        logger.error(f"❌ 載入教練清單失敗：{e}", exc_info=True)
+        line_bot_api.reply_message(event.reply_token, TextSendMessage(text="❌ 找不到對應的教練，請稍後再試。"))
+        self.go_back()
+
+def is_personal_coach_category(self):
+    return self.booking_category == "私人教練"
+
+def set_selected_coach(self, event):
+    self.selected_service = event.message.text.strip()
+    self.next_state()
 def get_gspread_client():
     credentials_content = os.environ.get("GOOGLE_APPLICATION_CREDENTIALS_CONTENT")
     if not credentials_content:
@@ -1340,17 +1384,36 @@ def handle_message(event):
                 logger.info(f"User {user_id}: 預約驗證 - 找到會員: {member_data['姓名']}")
 
             # 建立 FSM 狀態機並啟動流程
-                states = ['start_booking', 'category_selection', 'service_selection', 'date_input', 'time_input', 'confirmation', 'completed', 'cancelled']
+                states = [
+                            'start_booking',
+                            'category_selection',
+                            'expertise_selection',   # 新增：私人教練專長
+                            'coach_selection',       # 新增：教練姓名
+                            'service_selection',
+                            'date_input',
+                            'time_input',
+                            'confirmation',
+                            'completed',
+                            'cancelled'
+                            ]
                 transitions = [
-                    {'trigger': 'start', 'source': 'start_booking', 'dest': 'category_selection', 'after': 'ask_category'},
-                    {'trigger': 'select_category', 'source': 'category_selection', 'dest': 'service_selection', 'after': 'process_category'},
-                    {'trigger': 'select_service', 'source': 'service_selection', 'dest': 'date_input', 'after': 'ask_date'},
-                    {'trigger': 'enter_date', 'source': 'date_input', 'dest': 'time_input', 'after': 'ask_time'},
-                    {'trigger': 'enter_time', 'source': 'time_input', 'dest': 'confirmation', 'after': 'process_time'},
-                    {'trigger': 'confirm_booking', 'source': 'confirmation', 'dest': 'completed', 'after': 'process_booking'},
-                    {'trigger': 'cancel_booking', 'source': '*', 'dest': 'cancelled', 'after': 'send_cancellation_message'},
-                    {'trigger': 'restart_booking', 'source': '*', 'dest': 'start_booking', 'after': 'send_booking_start_message'}
-                ]
+                                {'trigger': 'start', 'source': 'start_booking', 'dest': 'category_selection', 'after': 'ask_category'},
+                                    # 根據是否為私人教練，走不同流程
+                                {'trigger': 'select_category', 'source': 'category_selection', 'dest': 'expertise_selection',
+                                 'conditions': 'is_personal_coach_category', 'after': 'ask_expertise'},
+                                {'trigger': 'select_category', 'source': 'category_selection', 'dest': 'service_selection',
+                                 'unless': 'is_personal_coach_category', 'after': 'process_category'},
+                                # 專長 → 教練 → 項目（實際上選完教練就可以定義 service）
+                                {'trigger': 'select_expertise', 'source': 'expertise_selection', 'dest': 'coach_selection', 'after': 'ask_coach_name'},
+                                {'trigger': 'select_coach', 'source': 'coach_selection', 'dest': 'date_input', 'after': 'ask_date'},
+                                    # 非私人教練的流程：項目 → 日期
+                                {'trigger': 'select_service', 'source': 'service_selection', 'dest': 'date_input', 'after': 'ask_date'},
+                                {'trigger': 'enter_date', 'source': 'date_input', 'dest': 'time_input', 'after': 'ask_time'},
+                                {'trigger': 'enter_time', 'source': 'time_input', 'dest': 'confirmation', 'after': 'process_time'},
+                                {'trigger': 'confirm_booking', 'source': 'confirmation', 'dest': 'completed', 'after': 'process_booking'},
+                                {'trigger': 'cancel_booking', 'source': '*', 'dest': 'cancelled', 'after': 'send_cancellation_message'},
+                                {'trigger': 'restart_booking', 'source': '*', 'dest': 'start_booking', 'after': 'send_booking_start_message'}
+                            ]
                 fsm = BookingFSM(user_id, states=states, transitions=transitions, initial='start_booking')
                 fsm.member_name = member_data['姓名']  # ✅ 儲存會員姓名
                 user_states[user_id] = fsm
