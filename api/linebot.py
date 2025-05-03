@@ -41,7 +41,42 @@ BOOKING_COLUMN_MAPPING = {
 user_states = {}
 
 class BookingFSM:
-    def __init__(self, user_id, states, transitions, initial):
+    
+from datetime import datetime, timedelta
+
+def generate_available_times(sheet_name, booking_service):
+    try:
+        client = get_gspread_client()
+        sheet = client.open_by_key(SPREADSHEET_KEY).worksheet(sheet_name)
+        records = sheet.get_all_records()
+        column_key = BOOKING_COLUMN_MAPPING.get(sheet_name)
+
+        for row in records:
+            if row.get(column_key) == booking_service:
+                start_time_str = row.get("開始時間")
+                end_time_str = row.get("結束時間")
+
+                if not start_time_str or not end_time_str:
+                    return []
+
+                fmt = "%H:%M"
+                start = datetime.strptime(start_time_str, fmt)
+                end = datetime.strptime(end_time_str, fmt)
+
+                # 生成每30分鐘一個時段
+                times = []
+                current = start
+                while current < end:
+                    times.append(current.strftime(fmt))
+                    current += timedelta(minutes=30)
+
+                return times
+        return []
+    except Exception as e:
+        logger.error(f"[時間生成失敗] {e}", exc_info=True)
+        return []
+
+def __init__(self, user_id, states, transitions, initial):
         # 您的初始化程式碼
         pass
 def load_booking_options():
@@ -74,45 +109,13 @@ def load_booking_options():
 def process_booking(event, booking_category, booking_service, booking_date, booking_time, user_id, member_name):
     try:
         client = get_gspread_client()
-        sheet_name = BOOKING_OPTIONS_SHEETS.get(booking_category)
-        if not sheet_name:
-            line_bot_api.reply_message(event.reply_token, TextSendMessage(text="找不到對應的預約類別工作表。"))
-            return
-
-        sheet = client.open_by_key(SPREADSHEET_KEY).worksheet(sheet_name)
-        records = sheet.get_all_records()
-
-        booking_column = BOOKING_COLUMN_MAPPING.get(sheet_name)
-        if not booking_column:
-            line_bot_api.reply_message(event.reply_token, TextSendMessage(text="工作表欄位設定錯誤。"))
-            return
-
-        # 篩選出符合項目 + 日期 + 時間的預約
-        matched = [
-            r for r in records
-            if r.get(booking_column) == booking_service and
-               r.get("日期") == booking_date and
-               r.get("時間") == booking_time
-        ]
-
-        # 根據類別決定預約限制
-        if booking_category == "預約團體課程":
-            if len(matched) >= 30:
-                line_bot_api.reply_message(event.reply_token, TextSendMessage(text="此時段已達最多30人，請選擇其他時間。"))
-                return
-        else:  # 私人教練與場地租借
-            if len(matched) > 0:
-                line_bot_api.reply_message(event.reply_token, TextSendMessage(text="此時段已被預約，請選擇其他時間。"))
-                return
-
-        # 預約成功，寫入該分頁
-        row = [user_id, member_name, booking_service, booking_date, booking_time]
-        sheet.append_row(row)
-        line_bot_api.reply_message(event.reply_token, TextSendMessage(text=f"預約成功：\n{booking_category} - {booking_service}\n日期：{booking_date}\n時間：{booking_time}"))
-
+        sheet = client.open_by_key(SPREADSHEET_KEY).worksheet("預約選項")
+        booking_data = [user_id, member_name, booking_category, booking_service, booking_date, booking_time]
+        sheet.append_row(booking_data)
+        line_bot_api.push_message(user_id, TextSendMessage(text=f"✅ 您的 {booking_category} - {booking_service} 預約已成功記錄！"))
     except Exception as e:
-        logger.error(f"[預約寫入錯誤] {e}", exc_info=True)
-        line_bot_api.reply_message(event.reply_token, TextSendMessage(text="預約發生錯誤，請稍後再試。"))
+        logger.error(f"儲存預約資料到 Google Sheets 失敗：{e}", exc_info=True)
+        line_bot_api.push_message(user_id, TextSendMessage(text="⚠ 儲存預約資料時發生錯誤，請稍後再試。"))
 
 class BookingFSM(GraphMachine):
     def __init__(self, user_id, **configs):
