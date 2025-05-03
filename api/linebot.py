@@ -143,12 +143,14 @@ class BookingFSM(GraphMachine):
             self.go_back()
     def process_service(self, event):
         self.booking_service = event.message.text
+        logger.info(f"[FSM] 使用者選擇項目：{self.booking_service}")
+
         if (
             self.booking_category
             and self.booking_category in booking_options["categories"]
             and self.booking_service in booking_options["categories"][self.booking_category]
         ):
-            line_bot_api.reply_message(event.reply_token, TextSendMessage(text="請輸入您想預約的日期 (YYYY-MM-DD)。"))
+            self.ask_date(event)
             self.next_state()
         else:
             line_bot_api.reply_message(
@@ -157,16 +159,51 @@ class BookingFSM(GraphMachine):
             )
             self.go_back()
 
+    def ask_service(self, event, services):
+        from linebot.models import TemplateSendMessage, CarouselTemplate, CarouselColumn, MessageAction
+
+        columns = []
+        for i in range(0, len(services), 3):
+            batch = services[i:i+3]
+            actions = [MessageAction(label=item, text=item) for item in batch]
+            columns.append(CarouselColumn(
+                title=self.booking_category,
+                text="請選擇預約項目：",
+                actions=actions
+            ))
+
+        template = TemplateSendMessage(
+            alt_text="請選擇預約項目",
+            template=CarouselTemplate(columns=columns[:10])
+        )
+        line_bot_api.reply_message(event.reply_token, template)
+
     def ask_date(self, event):
-        line_bot_api.reply_message(event.reply_token, TextSendMessage(text="請輸入您想預約的時間 (HH:MM)。"))
+        line_bot_api.reply_message(
+            event.reply_token,
+            TextSendMessage(text="請輸入您想預約的日期 (YYYY-MM-DD)。")
+        )
 
     def process_date(self, event):
         self.booking_date = event.message.text
         line_bot_api.reply_message(event.reply_token, TextSendMessage(text=f"請輸入預約時間 (HH:MM)。"))
         self.next_state()
 
+    def enter_date(self, event):
+        self.booking_date = event.message.text.strip()
+        logger.info(f"[FSM] 使用者輸入日期：{self.booking_date}")
+        self.ask_time(event)
+        self.next_state()
+
     def ask_time(self, event):
         line_bot_api.reply_message(event.reply_token, TextSendMessage(text="請輸入預約時間 (HH:MM)。"))
+
+    def enter_time(self, event):
+        self.booking_time = event.message.text.strip()
+        logger.info(f"[FSM] 使用者輸入時間：{self.booking_time}")
+        self.confirm_booking(event)
+        self.next_state()
+
 
     def process_time(self, event):
         self.booking_time = event.message.text
@@ -180,6 +217,19 @@ class BookingFSM(GraphMachine):
         )
         line_bot_api.reply_message(event.reply_token, TextSendMessage(text=confirmation_text))
         self.next_state()
+
+    def confirm_booking(self, event):
+        logger.info("[FSM] 進入預約確認階段")
+        msg = (
+            f"請確認您的預約：\n"
+            f"類別：{self.booking_category}\n"
+            f"項目：{self.booking_service}\n"
+            f"日期：{self.booking_date}\n"
+            f"時間：{self.booking_time}\n\n"
+            "輸入『確認』以完成預約，或輸入『取消』以取消。"
+        )
+        line_bot_api.reply_message(event.reply_token, TextSendMessage(text=msg))
+
     def process_booking(self, event):
         if event.message.text.lower() == "確認":
             try:
