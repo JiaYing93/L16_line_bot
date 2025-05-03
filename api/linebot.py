@@ -4,7 +4,8 @@ from linebot.exceptions import InvalidSignatureError
 from linebot.models import (
     MessageEvent, TextMessage, TextSendMessage,
     TemplateSendMessage, ButtonsTemplate, MessageAction, FlexSendMessage,
-    ConfirmTemplate, ImageCarouselTemplate, ImageCarouselColumn
+    ConfirmTemplate, ImageCarouselTemplate, ImageCarouselColumn,
+    BubbleContainer, CarouselContainer, BoxComponent, TextComponent, ButtonComponent, URIAction
 )
 from transitions.extensions import GraphMachine
 import os
@@ -18,6 +19,7 @@ import re
 import schedule
 import time
 from threading import Thread
+from datetime import datetime, timedelta
 
 app = Flask(__name__)
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
@@ -52,20 +54,37 @@ def load_booking_options():
         for category, sheet_name in BOOKING_OPTIONS_SHEETS.items():
             column_name = BOOKING_COLUMN_MAPPING.get(sheet_name, "項目")
             logger.info(f"嘗試載入 {category} 的預約選項，工作表：{sheet_name}，欄位：{column_name}")
+
             try:
                 sheet = client.open_by_key(SPREADSHEET_KEY).worksheet(sheet_name)
                 records = sheet.get_all_records()
-                options = [row.get(column_name) for row in records if row.get(column_name)]
-                booking_options["categories"][category] = options
-                logger.info(f"✅ {category} 選項載入成功，共 {len(options)} 筆：{options}")
+
+                if category == "預約私人教練":
+                    # 🧠 私人教練特殊格式（需要兩欄：專長 和 教練姓名）
+                    specialty_col = "專長"
+                    coach_col = "姓名"
+                    specialty_map = {}
+                    for row in records:
+                        spec = row.get(specialty_col)
+                        coach = row.get(coach_col)
+                        if spec and coach:
+                            specialty_map.setdefault(spec, []).append(coach)
+                    booking_options["categories"][category] = {"專長": specialty_map}
+                else:
+                    # ✅ 其他類別（團體課程/場地租借）
+                    items = [row.get(column_name) for row in records if row.get(column_name)]
+                    booking_options["categories"][category] = {"items": items}
+
+                logger.info(f"✅ {category} 選項載入成功")
+
             except gspread.exceptions.WorksheetNotFound:
                 logger.error(f"❌ 找不到工作表：{sheet_name}，跳過 {category}")
             except Exception as e:
                 logger.error(f"❌ 載入 {category} 失敗：{e}", exc_info=True)
 
         logger.info("[DEBUG] booking_options 結構如下：")
-        for category, items in booking_options["categories"].items():
-            logger.info(f" - {category}：{len(items)} 項目 → {items}")
+        for category, content in booking_options["categories"].items():
+            logger.info(f" - {category}：{content}")
 
     except Exception as e:
         logger.critical(f"❌ 預約資料整體載入失敗：{e}", exc_info=True)
@@ -122,30 +141,59 @@ class BookingFSM(GraphMachine):
         services = booking_options["categories"].get(self.booking_category)
         logger.info(f"[FSM] 該類別對應服務選項：{services}")
 
-        if services:
-            if len(services) <= 4:
-            # 少於 4 項使用 ButtonsTemplate
-                buttons = [MessageAction(label=service, text=service) for service in services]
+        if not services:
+            logger.warning(f"[FSM] 找不到任何服務選項 for 類別：{self.booking_category}")
+            line_bot_api.reply_message(
+                event.reply_token,
+                TextSendMessage(text=f"❌ {self.booking_category} 目前沒有任何可預約項目，請稍後再試。")
+            )
+            self.go_back()
+            return
+
+    # ✅ 處理私人教練（雙層結構）
+        if self.booking_category == "預約私人教練":
+            specialties = list(services["專長"].keys())
+            self.temp_data = {"專長列表": specialties}  # 暫存
+
+        # 少於 4 項用 ButtonsTemplate
+            if len(specialties) <= 4:
+                buttons = [MessageAction(label=spec, text=spec) for spec in specialties]
                 template = TemplateSendMessage(
-                    alt_text="請選擇預約項目",
+                    alt_text="請選擇教練專長",
                     template=ButtonsTemplate(
-                        title=f"{self.booking_category} 預約",
-                        text="您想預約哪個項目？",
+                        title="選擇教練專長",
+                        text="請選擇您想要預約的教練專長：",
                         actions=buttons
                     )
                 )
                 line_bot_api.reply_message(event.reply_token, template)
             else:
-            # 超過 4 項使用 CarouselTemplate
-                self.ask_service(event, services)
-            self.next_state()
-        else:
-            logger.warning(f"[FSM] 找不到任何服務選項 for 類別：{self.booking_category}")
-            line_bot_api.reply_message(
-                event.reply_token,
-                TextSendMessage(text=f"❌ {self.booking_category} 目前沒有任何可預約項目，請確認資料或稍後再試。")
-            )
+                self.ask_service(event, specialties, prompt="請選擇教練專長")
+            self.state = "service_selection"  # 等待使用者選擇專長
+            return
+
+    # ✅ 處理單層結構（場地租借、團體課程）
+        items = services.get("items", [])
+        if not items:
+            line_bot_api.reply_message(event.reply_token, TextSendMessage(text="⚠️ 沒有可用的選項，請稍後再試。"))
             self.go_back()
+            return
+
+        if len(items) <= 4:
+            buttons = [MessageAction(label=service, text=service) for service in items]
+            template = TemplateSendMessage(
+                alt_text="請選擇預約項目",
+                template=ButtonsTemplate(
+                    title=f"{self.booking_category} 預約",
+                    text="您想預約哪個項目？",
+                    actions=buttons
+                )
+            )
+            line_bot_api.reply_message(event.reply_token, template)
+        else:
+            self.ask_service(event, items)
+
+        self.next_state()
     def process_service(self, event):
         self.booking_service = event.message.text
         logger.info(f"[FSM] 使用者選擇項目：{self.booking_service}")
