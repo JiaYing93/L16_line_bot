@@ -212,25 +212,51 @@ class BookingFSM(GraphMachine):
             )
             self.go_back()
 
-    def ask_service(self, event, services):
-        from linebot.models import TemplateSendMessage, CarouselTemplate, CarouselColumn, MessageAction
+    def ask_service(self, event, category):
+        sheet_mapping = {
+            '團體課程': 'GroupCourses',
+            '私人教練': 'PrivateCoach',
+            '場地租借': 'VenueRental'
+        }
+        sheet_name = sheet_mapping.get(category)
+        if not sheet_name:
+            self.line_bot_api.reply_message(
+                event.reply_token,
+                TextSendMessage(text='無效的類別，請重新選擇。')
+            )
+            return
 
+        worksheet = self.spreadsheet.worksheet(sheet_name)
+        services = worksheet.col_values(1)[1:]  # 跳過標題列
+
+        if not services:
+            self.line_bot_api.reply_message(
+                event.reply_token,
+                TextSendMessage(text='找不到服務選項，請稍後再試。')
+            )
+            return
+
+        # 依每4個服務為一組建立CarouselColumn（最多10個bubble）
         columns = []
-        for i in range(0, len(services), 3):
-            batch = services[i:i+3]
-            actions = [MessageAction(label=item, text=item) for item in batch]
-            columns.append(CarouselColumn(
-                title=self.booking_category,
-                text="請選擇預約項目：",
+        for i in range(0, min(len(services), 40), 4):  # LINE 最多支援40個選項
+            actions = [
+                MessageAction(label=service[:20], text=service)
+                for service in services[i:i+4]
+            ]
+            column = CarouselColumn(
+                thumbnail_image_url="https://i.imgur.com/NWz9V2O.png",  # 可換成你自己預設圖片
+                title=f"{category} 選項",
+                text="請選擇服務項目",
                 actions=actions
-            ))
+            )
+            columns.append(column)
 
-        template = TemplateSendMessage(
-            alt_text="請選擇預約項目",
-            template=CarouselTemplate(columns=columns[:10])
+        template_message = TemplateSendMessage(
+            alt_text=f"{category} 服務選擇",
+            template=CarouselTemplate(columns=columns)
         )
-        line_bot_api.reply_message(event.reply_token, template)
 
+        self.line_bot_api.reply_message(event.reply_token, template_message)
     def select_service(self, event):
         user_input = event.message.text
 
