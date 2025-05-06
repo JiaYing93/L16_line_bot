@@ -307,34 +307,43 @@ class BookingFSM(GraphMachine):
 
             logger.info(f"[FSM] 使用者輸入時間：{booking_datetime}")
 
+        # 檢查是否早於現在時間
+            now = datetime.now()
+            if booking_datetime < now:
+                line_bot_api.reply_message(
+                    event.reply_token,
+                    TextSendMessage(text="❌ 無法預約過去的時間，請重新輸入。")
+                )
+                return
+
         # 取得對應試算表與欄位
             sheet_name = BOOKING_SHEET_MAPPING.get(self.booking_category)
             if not sheet_name:
                 raise ValueError("無法對應的工作表")
 
-            column_name = "時間"  # 根據你的工作表格式調整
+            column_name = "時間"
             date_column = "日期"
             target_column = None
 
-        # 若是私人教練 → 檢查教練時間衝突；場地 → 場地名稱；團體課程不檢查衝突
-            if self.booking_category == "私人教練":
+        # 團體課程不做衝突檢查
+            if self.booking_category == "團體課程":
+                self.booking_time = booking_time
+                self.next_state()
+                return
+            elif self.booking_category == "私人教練":
                 target_column = "教練姓名"
                 target_value = self.selected_service
             elif self.booking_category == "場地租借":
                 target_column = "場地"
                 target_value = self.selected_service
             else:
-            # 團體課程不檢查衝突
-                self.booking_time = booking_time
-                self.next_state()
-                return
+                raise ValueError("未知的預約類別")
 
-        # 讀取現有預約資料並檢查衝突
+        # 檢查衝突：讀取現有預約資料
             client = get_gspread_client()
             sheet = client.open_by_key(SPREADSHEET_KEY).worksheet(sheet_name)
             records = sheet.get_all_records()
 
-        # 檢查與同一資源（教練/場地）在同一天的所有預約
             conflict_found = False
             for row in records:
                 if (row.get(date_column) == self.booking_date.strftime("%Y-%m-%d") and
@@ -344,7 +353,7 @@ class BookingFSM(GraphMachine):
                     existing_time = datetime.strptime(row[column_name], "%H:%M").time()
                     existing_dt = datetime.combine(self.booking_date, existing_time)
 
-                # 若時間差小於 2 小時，表示衝突
+                # 若時間差小於 2 小時，視為衝突
                     if abs((booking_datetime - existing_dt).total_seconds()) < 2 * 3600:
                         conflict_found = True
                         break
@@ -360,7 +369,10 @@ class BookingFSM(GraphMachine):
 
         except ValueError:
             logger.warning(f"[FSM] 時間格式錯誤：{user_input}")
-            line_bot_api.reply_message(event.reply_token, TextSendMessage(text="❌ 時間格式錯誤，請輸入 HH:MM，例如 13:00"))
+            line_bot_api.reply_message(
+                event.reply_token,
+                TextSendMessage(text="❌ 時間格式錯誤，請輸入 HH:MM，例如 13:00")
+            )
 
     def process_time(self, event):
         self.booking_time = event.message.text
