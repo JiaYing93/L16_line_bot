@@ -194,6 +194,16 @@ class BookingFSM(GraphMachine):
             self.ask_service(event, items)
 
         self.next_state()
+
+    def is_group_course_category(self, event):
+        return event.message.text == "預約團體課程"
+
+    def is_personal_coach_category(self, event):
+        return event.message.text == "預約私人教練"
+
+    def is_venue_rent_category(self, event):
+        return event.message.text == "場地租借"
+        
     def process_service(self, event):
         self.booking_service = event.message.text
         logger.info(f"[FSM] 使用者選擇項目：{self.booking_service}")
