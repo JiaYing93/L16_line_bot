@@ -5,7 +5,7 @@ from linebot.models import (
     MessageEvent, TextMessage, TextSendMessage,
     TemplateSendMessage, ButtonsTemplate, MessageAction, FlexSendMessage,
     ConfirmTemplate, ImageCarouselTemplate, ImageCarouselColumn,
-    BubbleContainer, CarouselContainer, BoxComponent, TextComponent, ButtonComponent, URIAction
+    BubbleContainer, CarouselContainer, BoxComponent, TextComponent, ButtonComponent, URIAction,CarouselTemplate, CarouselColumn
 )
 from transitions.extensions import GraphMachine
 import os
