@@ -5,8 +5,8 @@ Jinja2==2.11.3
 MarkupSafe==2.0.1
 itsdangerous==1.1.0
 beautifulsoup4
-gspread
-oauth2client
+gspread>=5.0.0
+google-auth>=2.0.0
 requests
 transitions
 schedule==1.2.1
