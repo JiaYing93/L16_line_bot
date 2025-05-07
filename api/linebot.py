@@ -20,7 +20,13 @@ import schedule
 import time
 from threading import Thread
 from datetime import datetime, timedelta
+from google.oauth2.service_account import Credentials
 
+credentials = Credentials.from_service_account_info(
+    json.loads(GOOGLE_SHEET_JSON),
+    scopes=scope
+)
+gc = gspread.authorize(credentials)
 app = Flask(__name__)
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 logger = logging.getLogger(__name__)
